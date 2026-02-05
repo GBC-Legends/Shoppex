@@ -1,18 +1,24 @@
 import SwiftUI
 
 struct SuppliesScreenView: View {
+    @Binding var currentScreen: AppScreen
+
     var body: some View {
-        NavigationStack {
-            VStack {
-                Text("Supplies Screen")
-                NavigationLink("Screen 1") {
-                    HomeScreenView()
+        VStack {
+            Text("Supplies Screen")
+            Button("Home Screen") {
+                withAnimation(.easeInOut) {
+                    currentScreen = .home
                 }
-                NavigationLink("Screen 2") {
-                    CategoriesScreenView()
+            }
+            Button("Categories Screen") {
+                withAnimation(.easeInOut) {
+                    currentScreen = .categories
                 }
-                NavigationLink("Screen 4") {
-                    TrackingScreenView()
+            }
+            Button("Tracking Screen") {
+                withAnimation(.easeInOut) {
+                    currentScreen = .tracking
                 }
             }
         }

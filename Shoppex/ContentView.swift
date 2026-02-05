@@ -7,10 +7,29 @@
 
 import SwiftUI
 
+enum AppScreen {
+    case home
+    case categories
+    case supplies
+    case tracking
+}
+
+
 struct ContentView: View {
+    @State private var currentScreen: AppScreen = .home
+
     var body: some View {
         VStack {
-            HomeScreenView()
+            switch currentScreen {
+                case .home:
+                    HomeScreenView(currentScreen: $currentScreen)
+                case .categories:
+                    CategoriesScreenView(currentScreen: $currentScreen)
+                case .supplies:
+                    SuppliesScreenView(currentScreen: $currentScreen)
+                case .tracking:
+                    TrackingScreenView(currentScreen: $currentScreen)
+            }
         }
         .padding()
     }
