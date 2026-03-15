@@ -6,9 +6,9 @@ struct TrackingScreenView: View {
     @State private var selectedProvince = "Ontario"
 
     @State private var products: [TrackingItem] = [
-        TrackingItem(name: "Apples", price: 7.99, taxable: false),
-        TrackingItem(name: "Pizza", price: 12.99, taxable: true),
-        TrackingItem(name: "Detergent", price: 15.00, taxable: true)
+        TrackingItem(name: "Apples", price: "0.00", taxable: false),
+        TrackingItem(name: "Pizza", price: "0.00", taxable: true),
+        TrackingItem(name: "Detergent", price: "0.00", taxable: true)
     ]
 
     let provinces: [String: Double] = [
@@ -18,7 +18,7 @@ struct TrackingScreenView: View {
         "New Brunswick": 0.15,
         "Newfoundland and Labrador": 0.15,
         "Northwest Territories": 0.05,
-        "Nova Scotia": 0.15,
+        "Nova Scotia": 0.14,
         "Nunavut": 0.05,
         "Ontario": 0.13,
         "Prince Edward Island": 0.15,
@@ -28,17 +28,31 @@ struct TrackingScreenView: View {
     ]
 
     var subtotal: Double {
-        products.reduce(0) { $0 + $1.price }
+        products.reduce(0) { total, item in
+            total + (Double(item.price) ?? 0)
+        }
     }
 
     var taxAmount: Double {
         let rate = provinces[selectedProvince] ?? 0
-        let taxableTotal = products.filter { $0.taxable }.reduce(0) { $0 + $1.price }
+        let taxableTotal = products
+            .filter { $0.taxable }
+            .reduce(0) { total, item in
+                total + (Double(item.price) ?? 0)
+            }
         return taxableTotal * rate
     }
 
     var total: Double {
         subtotal + taxAmount
+    }
+
+    var taxRateText: String {
+        String(format: "%.2f%%", (provinces[selectedProvince] ?? 0) * 100)
+    }
+
+    var taxAmountText: String {
+        String(format: "$%.2f", taxAmount)
     }
 
     var body: some View {
@@ -77,13 +91,19 @@ struct TrackingScreenView: View {
                     .background(Color.white.opacity(0.3))
                     .padding(.horizontal, 24)
 
-                Picker("Province", selection: $selectedProvince) {
-                    ForEach(provinces.keys.sorted(), id: \.self) { province in
-                        Text(province)
+                HStack {
+                    Text("Province")
+                        .foregroundColor(.white.opacity(0.85))
+
+                    Spacer()
+
+                    Picker("", selection: $selectedProvince) {
+                        ForEach(provinces.keys.sorted(), id: \.self) { province in
+                            Text(province)
+                        }
                     }
+                    .pickerStyle(MenuPickerStyle())
                 }
-                .pickerStyle(MenuPickerStyle())
-                .foregroundColor(.white)
                 .padding(.horizontal, 24)
 
                 VStack(spacing: 10) {
@@ -91,9 +111,7 @@ struct TrackingScreenView: View {
 
                     SummaryRow(
                         title: "Sales Tax",
-                        value: String(format: "%.2f%%   $%.2f",
-                                      (provinces[selectedProvince] ?? 0) * 100,
-                                      taxAmount)
+                        value: "\(taxRateText)   \(taxAmountText)"
                     )
                 }
                 .padding(.horizontal, 24)
@@ -131,7 +149,7 @@ struct TrackingScreenView: View {
 struct TrackingItem: Identifiable {
     let id = UUID()
     let name: String
-    var price: Double
+    var price: String
     var taxable: Bool
 }
 
@@ -164,8 +182,20 @@ struct TrackingRow: View {
 
             Spacer()
 
-            Text(String(format: "$%.2f", item.price))
-                .foregroundColor(.white.opacity(0.8))
+            HStack(spacing: 4) {
+                Text("$")
+                    .foregroundColor(.white.opacity(0.7))
+
+                TextField("", text: $item.price)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 60)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.trailing)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.12))
+            .cornerRadius(8)
 
             Button {
                 onDelete()
