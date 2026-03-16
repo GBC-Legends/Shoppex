@@ -3,6 +3,58 @@ import SwiftUI
 struct TrackingScreenView: View {
     @Binding var currentScreen: AppScreen
 
+    @State private var selectedProvince = "Ontario"
+
+    @State private var products: [TrackingItem] = [
+        TrackingItem(name: "Apples", price: "0.00", taxable: false),
+        TrackingItem(name: "Pizza", price: "0.00", taxable: true),
+        TrackingItem(name: "Detergent", price: "0.00", taxable: true)
+    ]
+
+    let provinces: [String: Double] = [
+        "Alberta": 0.05,
+        "British Columbia": 0.12,
+        "Manitoba": 0.12,
+        "New Brunswick": 0.15,
+        "Newfoundland and Labrador": 0.15,
+        "Northwest Territories": 0.05,
+        "Nova Scotia": 0.14,
+        "Nunavut": 0.05,
+        "Ontario": 0.13,
+        "Prince Edward Island": 0.15,
+        "Quebec": 0.14975,
+        "Saskatchewan": 0.11,
+        "Yukon": 0.05
+    ]
+
+    var subtotal: Double {
+        products.reduce(0) { total, item in
+            total + (Double(item.price) ?? 0)
+        }
+    }
+
+    var taxAmount: Double {
+        let rate = provinces[selectedProvince] ?? 0
+        let taxableTotal = products
+            .filter { $0.taxable }
+            .reduce(0) { total, item in
+                total + (Double(item.price) ?? 0)
+            }
+        return taxableTotal * rate
+    }
+
+    var total: Double {
+        subtotal + taxAmount
+    }
+
+    var taxRateText: String {
+        String(format: "%.2f%%", (provinces[selectedProvince] ?? 0) * 100)
+    }
+
+    var taxAmountText: String {
+        String(format: "$%.2f", taxAmount)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
 
@@ -13,22 +65,54 @@ struct TrackingScreenView: View {
                     .font(.system(size: 28, weight: .regular, design: .serif))
                     .foregroundColor(.white)
 
-                VStack(spacing: 12) {
-                    TrackingRow(name: "Apples", price: "$7.99")
-                    TrackingRow(name: "Pizza", price: "$12.99")
-                    TrackingRow(name: "Detergent", price: "$15.00")
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 10)
+                    VStack(spacing: 12) {
+                        if products.isEmpty {
+                            VStack(spacing: 10) {
+                                Text("Cart is empty")
+                                    .font(.system(size: 20, weight: .regular, design: .serif))
+                                    .foregroundColor(.white.opacity(0.8))
+
+                                Text("Add products using +")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
+                            .padding(.top, 30)
+                        } else {
+                            ForEach($products) { $product in
+                                TrackingRow(item: $product) {
+                                    products.removeAll { $0.id == product.id }
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 24)
 
                 Divider()
                     .background(Color.white.opacity(0.3))
                     .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
+
+                HStack {
+                    Text("Province")
+                        .foregroundColor(.white.opacity(0.85))
+
+                    Spacer()
+
+                    Picker("", selection: $selectedProvince) {
+                        ForEach(provinces.keys.sorted(), id: \.self) { province in
+                            Text(province)
+                        }
+                    }
+                    .pickerStyle(MenuPickerStyle())
+                }
+                .padding(.horizontal, 24)
 
                 VStack(spacing: 10) {
-                    SummaryRow(title: "Subtotal", value: "$35.98")
-                    SummaryRow(title: "Sales Tax", value: "13%        $4.68")
+                    SummaryRow(title: "Subtotal", value: String(format: "$%.2f", subtotal))
+
+                    SummaryRow(
+                        title: "Sales Tax",
+                        value: "\(taxRateText)   \(taxAmountText)"
+                    )
                 }
                 .padding(.horizontal, 24)
 
@@ -41,7 +125,7 @@ struct TrackingScreenView: View {
 
                     Spacer()
 
-                    Text("$40.66")
+                    Text(String(format: "$%.2f", total))
                         .font(.system(size: 26, weight: .regular, design: .serif))
                         .foregroundColor(.white)
                 }
@@ -59,26 +143,62 @@ struct TrackingScreenView: View {
             .padding(.horizontal, 22)
             .padding(.bottom, 18)
         }
-        .foregroundColor(.white)
     }
 }
 
-struct TrackingRow: View {
+struct TrackingItem: Identifiable {
+    let id = UUID()
     let name: String
-    let price: String
+    var price: String
+    var taxable: Bool
+}
+
+struct TrackingRow: View {
+    @Binding var item: TrackingItem
+    var onDelete: () -> Void
 
     var body: some View {
         HStack {
-            Text(name)
-                .font(.system(size: 18, design: .serif))
-                .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(item.name)
+                    .font(.system(size: 18, design: .serif))
+                    .foregroundColor(.white)
+
+                Button {
+                    item.taxable.toggle()
+                } label: {
+                    Text(item.taxable ? "Taxable" : "Non-taxable")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule()
+                                .fill(item.taxable ? Color.green.opacity(0.35) : Color.gray.opacity(0.35))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
 
             Spacer()
 
-            Text(price)
-                .foregroundColor(.white.opacity(0.8))
-            
+            HStack(spacing: 4) {
+                Text("$")
+                    .foregroundColor(.white.opacity(0.7))
+
+                TextField("", text: $item.price)
+                    .keyboardType(.decimalPad)
+                    .frame(width: 60)
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.trailing)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.12))
+            .cornerRadius(8)
+
             Button {
+                onDelete()
             } label: {
                 Image(systemName: "trash.fill")
                     .foregroundColor(.white)
