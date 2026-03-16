@@ -44,10 +44,8 @@ struct ContentView: View {
                 switch currentScreen {
                 case .home:
                     HomeScreenView(currentScreen: $currentScreen)
-                case .categories:
+                case .categories, .supplies:
                     CategoriesScreenView(currentScreen: $currentScreen)
-                case .supplies:
-                    SuppliesScreenView(currentScreen: $currentScreen)
                 case .tracking:
                     TrackingScreenView(currentScreen: $currentScreen)
                 }
