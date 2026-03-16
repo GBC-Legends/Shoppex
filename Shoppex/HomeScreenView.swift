@@ -4,25 +4,6 @@ struct HomeScreenView: View {
     @Binding var currentScreen: AppScreen
 
     var body: some View {
-<<<<<<< HEAD
-        VStack {
-            Text("Home Screen")
-            Button("Categories Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .categories
-                }
-            }
-            Button("Supplies Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .supplies
-                }
-            }
-            Button("Tracking Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .tracking
-                }
-            }
-=======
         VStack(spacing: 0) {
             VStack(spacing: 24) {
                 Spacer().frame(height: 40)
@@ -78,7 +59,6 @@ private struct CircleWidget: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 150, height: 150)
->>>>>>> adef91d (adding categories and goods with folds)
         }
     }
 }

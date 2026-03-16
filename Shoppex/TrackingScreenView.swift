@@ -4,25 +4,6 @@ struct TrackingScreenView: View {
     @Binding var currentScreen: AppScreen
 
     var body: some View {
-<<<<<<< HEAD
-        VStack {
-            Text("Tracking Screen")
-            Button("Home Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .home
-                }
-            }
-            Button("Categories Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .categories
-                }
-            }
-            Button("Supplies Screen") {
-                withAnimation(.easeInOut) {
-                    currentScreen = .supplies
-                }
-            }
-=======
         VStack(spacing: 0) {
 
             VStack(spacing: 18) {
@@ -96,7 +77,7 @@ struct TrackingRow: View {
 
             Text(price)
                 .foregroundColor(.white.opacity(0.8))
-            
+
             Button {
             } label: {
                 Image(systemName: "trash.fill")
@@ -126,7 +107,6 @@ struct SummaryRow: View {
 
             Text(value)
                 .foregroundColor(.white.opacity(0.85))
->>>>>>> adef91d (adding categories and goods with folds)
         }
     }
 }
