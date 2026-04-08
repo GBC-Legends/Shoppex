@@ -1,5 +1,56 @@
 import Foundation
 import GRDB
+import SQLite3
+
+let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
+struct Category: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var name: String
+    var icon: String
+    var isExpanded: Bool
+
+    init(id: String, name: String, icon: String, isExpanded: Bool = false) {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.isExpanded = isExpanded
+    }
+}
+
+struct Supply: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var categoryId: String
+    var name: String
+    var isExpanded: Bool
+
+    init(id: String, categoryId: String, name: String, isExpanded: Bool = false) {
+        self.id = id
+        self.categoryId = categoryId
+        self.name = name
+        self.isExpanded = isExpanded
+    }
+}
+
+struct Product: Codable, FetchableRecord, PersistableRecord {
+    var id: String
+    var supplyId: String
+    var name: String
+    var price: Double
+    var unit: String
+    var brand: String
+    var notes: String
+
+    init(supplyId: String, name: String, price: Double, unit: String, brand: String, notes: String = "") {
+        self.id = UUID().uuidString
+        self.supplyId = supplyId
+        self.name = name
+        self.price = price
+        self.unit = unit
+        self.brand = brand
+        self.notes = notes
+    }
+}
 
 enum AppDatabase {
     static func setup(_ dbQueue: DatabaseQueue) throws {
@@ -57,11 +108,11 @@ enum AppDatabase {
         let medicationId = UUID()
 
         let categories = [
-            Category(id: dairyId, name: "Dairy", icon: "drop.fill"),
-            Category(id: bakeryId, name: "Bakery", icon: "flame.fill"),
-            Category(id: produceId, name: "Produce", icon: "leaf.fill"),
-            Category(id: cleaningId, name: "Cleaning", icon: "sparkles"),
-            Category(id: medicationId, name: "Medication", icon: "cross.fill")
+            Category(id: dairyId.uuidString, name: "Dairy", icon: "drop.fill"),
+            Category(id: bakeryId.uuidString, name: "Bakery", icon: "flame.fill"),
+            Category(id: produceId.uuidString, name: "Produce", icon: "leaf.fill"),
+            Category(id: cleaningId.uuidString, name: "Cleaning", icon: "sparkles"),
+            Category(id: medicationId.uuidString, name: "Medication", icon: "cross.fill")
         ]
 
         for var category in categories {
@@ -81,21 +132,21 @@ enum AppDatabase {
         let painReliefId = UUID()
 
         let supplies = [
-            Supply(id: milkId, categoryId: dairyId, name: "Milk"),
-            Supply(id: cheeseId, categoryId: dairyId, name: "Cheese"),
-            Supply(id: sourCreamId, categoryId: dairyId, name: "Sour Cream"),
+            Supply(id: milkId.uuidString, categoryId: dairyId.uuidString, name: "Milk"),
+            Supply(id: cheeseId.uuidString, categoryId: dairyId.uuidString, name: "Cheese"),
+            Supply(id: sourCreamId.uuidString, categoryId: dairyId.uuidString, name: "Sour Cream"),
 
-            Supply(id: breadId, categoryId: bakeryId, name: "Bread"),
-            Supply(id: bagelsId, categoryId: bakeryId, name: "Bagels"),
+            Supply(id: breadId.uuidString, categoryId: bakeryId.uuidString, name: "Bread"),
+            Supply(id: bagelsId.uuidString, categoryId: bakeryId.uuidString, name: "Bagels"),
 
-            Supply(id: applesId, categoryId: produceId, name: "Apples"),
-            Supply(id: bananasId, categoryId: produceId, name: "Bananas"),
+            Supply(id: applesId.uuidString, categoryId: produceId.uuidString, name: "Apples"),
+            Supply(id: bananasId.uuidString, categoryId: produceId.uuidString, name: "Bananas"),
 
-            Supply(id: detergentId, categoryId: cleaningId, name: "Detergent"),
-            Supply(id: dishSoapId, categoryId: cleaningId, name: "Dish Soap"),
-            Supply(id: paperTowelsId, categoryId: cleaningId, name: "Paper Towels"),
+            Supply(id: detergentId.uuidString, categoryId: cleaningId.uuidString, name: "Detergent"),
+            Supply(id: dishSoapId.uuidString, categoryId: cleaningId.uuidString, name: "Dish Soap"),
+            Supply(id: paperTowelsId.uuidString, categoryId: cleaningId.uuidString, name: "Paper Towels"),
 
-            Supply(id: painReliefId, categoryId: medicationId, name: "Pain Relief")
+            Supply(id: painReliefId.uuidString, categoryId: medicationId.uuidString, name: "Pain Relief")
         ]
 
         for var supply in supplies {
@@ -103,34 +154,34 @@ enum AppDatabase {
         }
 
         let products = [
-            Product(supplyId: milkId, name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated"),
-            Product(supplyId: milkId, name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated"),
-            Product(supplyId: milkId, name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated"),
+            Product(supplyId: milkId.uuidString, name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated"),
+            Product(supplyId: milkId.uuidString, name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated"),
+            Product(supplyId: milkId.uuidString, name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated"),
 
-            Product(supplyId: cheeseId, name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated"),
-            Product(supplyId: cheeseId, name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated"),
+            Product(supplyId: cheeseId.uuidString, name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated"),
+            Product(supplyId: cheeseId.uuidString, name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated"),
 
-            Product(supplyId: sourCreamId, name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated"),
+            Product(supplyId: sourCreamId.uuidString, name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated"),
 
-            Product(supplyId: breadId, name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder"),
-            Product(supplyId: breadId, name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre"),
+            Product(supplyId: breadId.uuidString, name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder"),
+            Product(supplyId: breadId.uuidString, name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre"),
 
-            Product(supplyId: bagelsId, name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style"),
+            Product(supplyId: bagelsId.uuidString, name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style"),
 
-            Product(supplyId: applesId, name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith"),
-            Product(supplyId: applesId, name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm"),
+            Product(supplyId: applesId.uuidString, name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith"),
+            Product(supplyId: applesId.uuidString, name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm"),
 
-            Product(supplyId: bananasId, name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita"),
+            Product(supplyId: bananasId.uuidString, name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita"),
 
-            Product(supplyId: detergentId, name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide"),
-            Product(supplyId: detergentId, name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent"),
+            Product(supplyId: detergentId.uuidString, name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide"),
+            Product(supplyId: detergentId.uuidString, name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent"),
 
-            Product(supplyId: dishSoapId, name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original"),
+            Product(supplyId: dishSoapId.uuidString, name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original"),
 
-            Product(supplyId: paperTowelsId, name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size"),
+            Product(supplyId: paperTowelsId.uuidString, name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size"),
 
-            Product(supplyId: painReliefId, name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food"),
-            Product(supplyId: painReliefId, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol")
+            Product(supplyId: painReliefId.uuidString, name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food"),
+            Product(supplyId: painReliefId.uuidString, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol")
         ]
 
         for var product in products {
@@ -169,30 +220,30 @@ final class DB {
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             icon TEXT NOT NULL,
-            is_expanded INTEGER NOT NULL DEFAULT 0
+            isExpanded INTEGER NOT NULL DEFAULT 0
         );
         """
 
         let suppliesSQL = """
         CREATE TABLE IF NOT EXISTS supplies (
             id TEXT PRIMARY KEY,
-            category_id TEXT NOT NULL,
+            categoryId TEXT NOT NULL,
             name TEXT NOT NULL,
-            is_expanded INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+            isExpanded INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (categoryId) REFERENCES categories(id) ON DELETE CASCADE
         );
         """
 
         let productsSQL = """
         CREATE TABLE IF NOT EXISTS products (
             id TEXT PRIMARY KEY,
-            supply_id TEXT NOT NULL,
+            supplyId TEXT NOT NULL,
             name TEXT NOT NULL,
             price REAL NOT NULL,
             unit TEXT NOT NULL,
             brand TEXT NOT NULL,
             notes TEXT NOT NULL DEFAULT '',
-            FOREIGN KEY (supply_id) REFERENCES supplies(id) ON DELETE CASCADE
+            FOREIGN KEY (supplyId) REFERENCES supplies(id) ON DELETE CASCADE
         );
         """
 
@@ -200,8 +251,8 @@ final class DB {
         execute(suppliesSQL)
         execute(productsSQL)
 
-        execute("CREATE INDEX IF NOT EXISTS idx_supplies_category_id ON supplies(category_id);")
-        execute("CREATE INDEX IF NOT EXISTS idx_products_supply_id ON products(supply_id);")
+        execute("CREATE INDEX IF NOT EXISTS idx_supplies_categoryId ON supplies(categoryId);")
+        execute("CREATE INDEX IF NOT EXISTS idx_products_supplyId ON products(supplyId);")
     }
 
     private func preseedIfNeeded() {
@@ -225,16 +276,16 @@ final class DB {
 
     func insertCategory(_ category: CategoryItem) {
         let sql = """
-        INSERT INTO categories (id, name, icon, is_expanded)
+        INSERT INTO categories (id, name, icon, isExpanded)
         VALUES (?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
 
-        sqlite3_bind_text(stmt, 1, ns(category.id.uuidString), -1, nil)
-        sqlite3_bind_text(stmt, 2, ns(category.name), -1, nil)
-        sqlite3_bind_text(stmt, 3, ns(category.icon), -1, nil)
+        sqlite3_bind_text(stmt, 1, category.id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, category.name.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 3, category.icon.cString(using: .utf8), -1, SQLITE_TRANSIENT)
         sqlite3_bind_int(stmt, 4, category.isExpanded ? 1 : 0)
 
         stepAndFinalize(stmt)
@@ -242,16 +293,16 @@ final class DB {
 
     func insertSupply(_ supply: SupplyItem, categoryID: String) {
         let sql = """
-        INSERT INTO supplies (id, category_id, name, is_expanded)
+        INSERT INTO supplies (id, categoryId, name, isExpanded)
         VALUES (?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
 
-        sqlite3_bind_text(stmt, 1, ns(supply.id.uuidString), -1, nil)
-        sqlite3_bind_text(stmt, 2, ns(categoryID), -1, nil)
-        sqlite3_bind_text(stmt, 3, ns(supply.name), -1, nil)
+        sqlite3_bind_text(stmt, 1, supply.id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, categoryID.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 3, supply.name.cString(using: .utf8), -1, SQLITE_TRANSIENT)
         sqlite3_bind_int(stmt, 4, supply.isExpanded ? 1 : 0)
 
         stepAndFinalize(stmt)
@@ -259,20 +310,20 @@ final class DB {
 
     func insertProduct(_ product: ProductDetail, supplyID: String) {
         let sql = """
-        INSERT INTO products (id, supply_id, name, price, unit, brand, notes)
+        INSERT INTO products (id, supplyId, name, price, unit, brand, notes)
         VALUES (?, ?, ?, ?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
 
-        sqlite3_bind_text(stmt, 1, ns(product.id.uuidString), -1, nil)
-        sqlite3_bind_text(stmt, 2, ns(supplyID), -1, nil)
-        sqlite3_bind_text(stmt, 3, ns(product.name), -1, nil)
+        sqlite3_bind_text(stmt, 1, product.id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, supplyID.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 3, product.name.cString(using: .utf8), -1, SQLITE_TRANSIENT)
         sqlite3_bind_double(stmt, 4, product.price)
-        sqlite3_bind_text(stmt, 5, ns(product.unit), -1, nil)
-        sqlite3_bind_text(stmt, 6, ns(product.brand), -1, nil)
-        sqlite3_bind_text(stmt, 7, ns(product.notes), -1, nil)
+        sqlite3_bind_text(stmt, 5, product.unit.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 6, product.brand.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 7, product.notes.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         stepAndFinalize(stmt)
     }
@@ -281,7 +332,7 @@ final class DB {
         var result: [CategoryItem] = []
 
         let categorySQL = """
-        SELECT id, name, icon, is_expanded
+        SELECT id, name, icon, isExpanded
         FROM categories
         ORDER BY name;
         """
@@ -316,15 +367,15 @@ final class DB {
         var result: [SupplyItem] = []
 
         let sql = """
-        SELECT id, name, is_expanded
+        SELECT id, name, isExpanded
         FROM supplies
-        WHERE category_id = ?
+        WHERE categoryId = ?
         ORDER BY name;
         """
 
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
-        sqlite3_bind_text(stmt, 1, ns(categoryID), -1, nil)
+        sqlite3_bind_text(stmt, 1, categoryID.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         while sqlite3_step(stmt) == SQLITE_ROW {
             let supplyID = string(from: stmt, at: 0) ?? ""
@@ -353,13 +404,13 @@ final class DB {
         let sql = """
         SELECT id, name, price, unit, brand, notes
         FROM products
-        WHERE supply_id = ?
+        WHERE supplyId = ?
         ORDER BY name;
         """
 
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
-        sqlite3_bind_text(stmt, 1, ns(supplyID), -1, nil)
+        sqlite3_bind_text(stmt, 1, supplyID.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         while sqlite3_step(stmt) == SQLITE_ROW {
             let id = string(from: stmt, at: 0) ?? ""
@@ -386,23 +437,23 @@ final class DB {
     }
 
     func updateCategoryExpanded(id: UUID, isExpanded: Bool) {
-        let sql = "UPDATE categories SET is_expanded = ? WHERE id = ?;"
+        let sql = "UPDATE categories SET isExpanded = ? WHERE id = ?;"
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
 
         sqlite3_bind_int(stmt, 1, isExpanded ? 1 : 0)
-        sqlite3_bind_text(stmt, 2, ns(id.uuidString), -1, nil)
+        sqlite3_bind_text(stmt, 2, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         stepAndFinalize(stmt)
     }
 
     func updateSupplyExpanded(id: UUID, isExpanded: Bool) {
-        let sql = "UPDATE supplies SET is_expanded = ? WHERE id = ?;"
+        let sql = "UPDATE supplies SET isExpanded = ? WHERE id = ?;"
         var stmt: OpaquePointer?
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
 
         sqlite3_bind_int(stmt, 1, isExpanded ? 1 : 0)
-        sqlite3_bind_text(stmt, 2, ns(id.uuidString), -1, nil)
+        sqlite3_bind_text(stmt, 2, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         stepAndFinalize(stmt)
     }
@@ -442,7 +493,5 @@ final class DB {
         return String(cString: cString)
     }
 
-    private func ns(_ string: String) -> NSString {
-        string as NSString
-    }
+
 }
