@@ -5,10 +5,10 @@ struct TrackingScreenView: View {
 
     @State private var selectedProvince = "Ontario"
 
-    @State private var products: [TrackingItem] = [
-        TrackingItem(name: "Apples", price: "0.00", taxable: false),
-        TrackingItem(name: "Pizza", price: "0.00", taxable: true),
-        TrackingItem(name: "Detergent", price: "0.00", taxable: true)
+    @State private var summaryItems: [SummaryTrackedItem] = [
+        SummaryTrackedItem(name: "Apples", price: "0.00", taxable: false),
+        SummaryTrackedItem(name: "Pizza", price: "0.00", taxable: true),
+        SummaryTrackedItem(name: "Detergent", price: "0.00", taxable: true)
     ]
 
     let provinces: [String: Double] = [
@@ -28,14 +28,14 @@ struct TrackingScreenView: View {
     ]
 
     var subtotal: Double {
-        products.reduce(0) { total, item in
+        summaryItems.reduce(0) { total, item in
             total + (Double(item.price) ?? 0)
         }
     }
 
     var taxAmount: Double {
         let rate = provinces[selectedProvince] ?? 0
-        let taxableTotal = products
+        let taxableTotal = summaryItems
             .filter { $0.taxable }
             .reduce(0) { total, item in
                 total + (Double(item.price) ?? 0)
@@ -66,7 +66,7 @@ struct TrackingScreenView: View {
                     .foregroundColor(.white)
 
                     VStack(spacing: 12) {
-                        if products.isEmpty {
+                        if summaryItems.isEmpty {
                             VStack(spacing: 10) {
                                 Text("Cart is empty")
                                     .font(.system(size: 20, weight: .regular, design: .serif))
@@ -78,9 +78,9 @@ struct TrackingScreenView: View {
                             }
                             .padding(.top, 30)
                         } else {
-                            ForEach($products) { $product in
+                            ForEach($summaryItems) { $product in
                                 TrackingRow(item: $product) {
-                                    products.removeAll { $0.id == product.id }
+                                    summaryItems.removeAll { $0.id == product.id }
                                 }
                             }
                         }
@@ -146,7 +146,7 @@ struct TrackingScreenView: View {
     }
 }
 
-struct TrackingItem: Identifiable {
+struct SummaryTrackedItem: Identifiable {
     let id = UUID()
     let name: String
     var price: String
@@ -154,7 +154,7 @@ struct TrackingItem: Identifiable {
 }
 
 struct TrackingRow: View {
-    @Binding var item: TrackingItem
+    @Binding var item: SummaryTrackedItem
     var onDelete: () -> Void
 
     var body: some View {

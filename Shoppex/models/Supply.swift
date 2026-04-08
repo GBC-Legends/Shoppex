@@ -1,20 +1,20 @@
 import Foundation
 
-struct SupplyItem: Identifiable {
+struct ProductItem: Identifiable {
     let id: UUID
     let name: String
-    let products: [ProductDetail]
+    let trackedItems: [TrackedItem]
     var isExpanded: Bool = false
 
     init(
         id: UUID = UUID(),
         name: String,
-        products: [ProductDetail],
+        trackedItems: [TrackedItem],
         isExpanded: Bool = false
     ) {
         self.id = id
         self.name = name
-        self.products = products
+        self.trackedItems = trackedItems
         self.isExpanded = isExpanded
     }
 }

@@ -1,12 +1,13 @@
 import Foundation
 
-struct ProductDetail: Identifiable {
+struct TrackedItem: Identifiable {
     let id: UUID
     let name: String
     let price: Double
     let unit: String
     let brand: String
     let notes: String
+    let purchasedAt: String
 
     init(
         id: UUID = UUID(),
@@ -14,7 +15,8 @@ struct ProductDetail: Identifiable {
         price: Double,
         unit: String,
         brand: String,
-        notes: String
+        notes: String,
+        purchasedAt: String
     ) {
         self.id = id
         self.name = name
@@ -22,6 +24,7 @@ struct ProductDetail: Identifiable {
         self.unit = unit
         self.brand = brand
         self.notes = notes
+        self.purchasedAt = purchasedAt
     }
 
     var priceWithTax: Double { price * 1.13 }

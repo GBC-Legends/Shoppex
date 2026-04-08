@@ -7,25 +7,36 @@ struct CategoriesScreenView: View {
 
     var filteredCategories: [CategoryItem] {
         guard !searchText.isEmpty else { return categories }
+
         return categories.compactMap { category in
-            let matchingItems = category.items.compactMap { item -> SupplyItem? in
-                if item.name.lowercased().contains(searchText.lowercased()) { return item }
-                let matchingProducts = item.products.filter {
+            let matchingProducts = category.products.compactMap { product -> ProductItem? in
+                if product.name.lowercased().contains(searchText.lowercased()) {
+                    return product
+                }
+
+                let matchingTrackedItems = product.trackedItems.filter {
                     $0.name.lowercased().contains(searchText.lowercased())
                 }
-                if !matchingProducts.isEmpty {
-                    let copy = item
-                    return copy
-                }
-                return nil
+
+                guard !matchingTrackedItems.isEmpty else { return nil }
+
+                return ProductItem(
+                    id: product.id,
+                    name: product.name,
+                    trackedItems: matchingTrackedItems,
+                    isExpanded: product.isExpanded
+                )
             }
-            if category.name.lowercased().contains(searchText.lowercased()) { return category }
-            if !matchingItems.isEmpty {
-                var copy = category
-                copy.items = matchingItems
-                return copy
+
+            if category.name.lowercased().contains(searchText.lowercased()) {
+                return category
             }
-            return nil
+
+            guard !matchingProducts.isEmpty else { return nil }
+
+            var copy = category
+            copy.products = matchingProducts
+            return copy
         }
     }
 
@@ -37,7 +48,7 @@ struct CategoriesScreenView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.white.opacity(0.4))
-                    TextField("", text: $searchText, prompt: Text("Search items...").foregroundColor(.white.opacity(0.4)))
+                    TextField("", text: $searchText, prompt: Text("Search products...").foregroundColor(.white.opacity(0.4)))
                         .foregroundColor(.white)
                         .font(.system(size: 17))
                 }
@@ -51,7 +62,6 @@ struct CategoriesScreenView: View {
                     .foregroundColor(.white)
                     .padding(.top, 10)
 
-
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(filteredCategories.indices, id: \.self) { catIndex in
@@ -60,8 +70,8 @@ struct CategoriesScreenView: View {
                                 onToggleCategory: {
                                     toggleCategory(id: filteredCategories[catIndex].id)
                                 },
-                                onToggleItem: { itemID in
-                                    toggleItem(categoryID: filteredCategories[catIndex].id, itemID: itemID)
+                                onToggleProduct: { productID in
+                                    toggleProduct(categoryID: filteredCategories[catIndex].id, productID: productID)
                                 }
                             )
                         }
@@ -85,7 +95,6 @@ struct CategoriesScreenView: View {
             .padding(.bottom, 18)
         }
         .foregroundColor(.white)
-
         .onAppear {
             categories = DB.shared.fetchCategoriesTree()
         }
@@ -93,25 +102,26 @@ struct CategoriesScreenView: View {
 
     private func toggleCategory(id: UUID) {
         withAnimation(.easeInOut(duration: 0.25)) {
-            if let i = categories.firstIndex(where: { $0.id == id }) {
-                categories[i].isExpanded.toggle()
+            if let index = categories.firstIndex(where: { $0.id == id }) {
+                categories[index].isExpanded.toggle()
             }
         }
     }
 
-    private func toggleItem(categoryID: UUID, itemID: UUID) {
+    private func toggleProduct(categoryID: UUID, productID: UUID) {
         withAnimation(.easeInOut(duration: 0.2)) {
-            if let ci = categories.firstIndex(where: { $0.id == categoryID }),
-               let ii = categories[ci].items.firstIndex(where: { $0.id == itemID }) {
-                categories[ci].items[ii].isExpanded.toggle()
+            if let categoryIndex = categories.firstIndex(where: { $0.id == categoryID }),
+               let productIndex = categories[categoryIndex].products.firstIndex(where: { $0.id == productID }) {
+                categories[categoryIndex].products[productIndex].isExpanded.toggle()
             }
         }
     }
 }
+
 struct CategoryAccordionRow: View {
     let category: CategoryItem
     let onToggleCategory: () -> Void
-    let onToggleItem: (UUID) -> Void
+    let onToggleProduct: (UUID) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -128,7 +138,7 @@ struct CategoryAccordionRow: View {
 
                     Spacer()
 
-                    Text("\(category.items.count) items")
+                    Text("\(category.products.count) products")
                         .font(.system(size: 13))
                         .foregroundColor(.white.opacity(0.4))
 
@@ -140,17 +150,18 @@ struct CategoryAccordionRow: View {
                 .padding(.horizontal, 18)
                 .padding(.vertical, 16)
                 .background(
-                    RoundedRectangle(cornerRadius: category.isExpanded ? 16 : 16)
+                    RoundedRectangle(cornerRadius: 16)
                         .fill(Color.white.opacity(0.1))
                 )
             }
             .buttonStyle(PlainButtonStyle())
+
             if category.isExpanded {
                 VStack(spacing: 0) {
-                    ForEach(category.items) { item in
-                        ItemAccordionRow(
-                            item: item,
-                            onToggle: { onToggleItem(item.id) }
+                    ForEach(category.products) { product in
+                        ProductAccordionRow(
+                            product: product,
+                            onToggle: { onToggleProduct(product.id) }
                         )
                         .padding(.leading, 16)
                     }
@@ -168,40 +179,43 @@ struct CategoryAccordionRow: View {
         .padding(.bottom, 10)
     }
 }
-struct ItemAccordionRow: View {
-    let item: SupplyItem
+
+struct ProductAccordionRow: View {
+    let product: ProductItem
     let onToggle: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
             Button(action: onToggle) {
                 HStack {
-                    Text(item.name)
+                    Text(product.name)
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.9))
 
                     Spacer()
 
-                    Text("\(item.products.count) products")
+                    Text("\(product.trackedItems.count) purchases")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.35))
 
-                    Image(systemName: item.isExpanded ? "chevron.down" : "chevron.right")
+                    Image(systemName: product.isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.white.opacity(0.4))
-                        .animation(.easeInOut(duration: 0.2), value: item.isExpanded)
+                        .animation(.easeInOut(duration: 0.2), value: product.isExpanded)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 13)
             }
             .buttonStyle(PlainButtonStyle())
+
             Divider()
                 .background(Color.white.opacity(0.07))
                 .padding(.leading, 14)
-            if item.isExpanded {
+
+            if product.isExpanded {
                 VStack(spacing: 0) {
-                    ForEach(item.products) { product in
-                        ProductDetailRow(product: product)
+                    ForEach(product.trackedItems) { trackedItem in
+                        TrackedItemRow(trackedItem: trackedItem)
                     }
                 }
                 .padding(.vertical, 6)
@@ -212,31 +226,35 @@ struct ItemAccordionRow: View {
     }
 }
 
-struct ProductDetailRow: View {
-    let product: ProductDetail
+struct TrackedItemRow: View {
+    let trackedItem: TrackedItem
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(product.name)
+                Text(trackedItem.name)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white.opacity(0.85))
 
                 HStack(spacing: 6) {
-                    Text(product.brand)
+                    Text(trackedItem.brand)
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.4))
 
-                    if !product.notes.isEmpty {
+                    if !trackedItem.notes.isEmpty {
                         Text("·")
                             .foregroundColor(.white.opacity(0.3))
-                        Text(product.notes)
+                        Text(trackedItem.notes)
                             .font(.system(size: 12))
                             .foregroundColor(Color(hex: "#4A90E2").opacity(0.8))
                     }
                 }
 
-                Text(String(format: "$%.2f  ($%.2f with HST)", product.price, product.priceWithTax))
+                Text(trackedItem.purchasedAt)
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.4))
+
+                Text(String(format: "$%.2f  ($%.2f with HST)", trackedItem.price, trackedItem.priceWithTax))
                     .font(.system(size: 12))
                     .foregroundColor(Color(hex: "#4A90E2"))
             }
@@ -244,7 +262,7 @@ struct ProductDetailRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 6) {
-                Text(product.unit)
+                Text(trackedItem.unit)
                     .font(.system(size: 11))
                     .foregroundColor(.white.opacity(0.35))
 

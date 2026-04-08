@@ -26,7 +26,7 @@ struct HomeScreenView: View {
 
                 Spacer()
 
-                Text("click + to start adding supplies")
+                Text("click + to start tracking products")
                     .font(.system(size: 16, weight: .regular, design: .serif))
                     .foregroundColor(.white.opacity(0.75))
                     .padding(.bottom, 14)
