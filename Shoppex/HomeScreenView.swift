@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeScreenView: View {
     @Binding var currentScreen: AppScreen
+    @EnvironmentObject private var shoppingStore: ShoppingStore
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,7 +25,8 @@ struct HomeScreenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
 
-                Spacer()
+                SavedShoppingsSection(shoppings: shoppingStore.savedShoppings)
+                    .padding(.horizontal, 24)
 
                 Text("click + to start tracking products")
                     .font(.system(size: 16, weight: .regular, design: .serif))
@@ -43,6 +45,41 @@ struct HomeScreenView: View {
             .padding(.bottom, 18)
         }
         .foregroundColor(.white)
+    }
+}
+
+private struct SavedShoppingsSection: View {
+    let shoppings: [TrackedShopping]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Saved Shoppings")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(.white)
+
+            if shoppings.isEmpty {
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 110)
+                    .overlay(
+                        Text("Saved purchases will appear here")
+                            .font(.system(size: 14))
+                            .foregroundColor(.white.opacity(0.5))
+                    )
+            } else {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(spacing: 12) {
+                        ForEach(shoppings) { shopping in
+                            SavedShoppingCard(shopping: shopping)
+                        }
+                    }
+                    .padding(.trailing, 6)
+                }
+                .frame(height: 220)
+                .clipped()
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

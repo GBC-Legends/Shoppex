@@ -99,24 +99,7 @@ struct TrackingScreenView: View {
                 .disabled(shoppingStore.draftItems.isEmpty)
                 .padding(.horizontal, 24)
 
-                if !shoppingStore.savedShoppings.isEmpty {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Saved Shoppings")
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundColor(.white)
-
-                            ForEach(shoppingStore.savedShoppings) { shopping in
-                                SavedShoppingCard(shopping: shopping)
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 6)
-                        .padding(.bottom, 12)
-                    }
-                } else {
-                    Spacer()
-                }
+                Spacer()
 
                 HStack {
                     Text("Total")
