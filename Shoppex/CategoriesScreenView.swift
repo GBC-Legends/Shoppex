@@ -1,90 +1,9 @@
 import SwiftUI
 
-struct ProductDetail: Identifiable {
-    let id = UUID()
-    let name: String
-    let price: Double
-    let unit: String
-    let brand: String
-    let notes: String
-
-    var priceWithTax: Double { price * 1.13 }
-}
-
-struct SupplyItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let products: [ProductDetail]
-    var isExpanded: Bool = false
-}
-
-struct CategoryItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let icon: String
-    var items: [SupplyItem]
-    var isExpanded: Bool = false
-}
-
-extension CategoryItem {
-    static let sampleData: [CategoryItem] = [
-        CategoryItem(name: "Dairy", icon: "drop.fill", items: [
-            SupplyItem(name: "Milk", products: [
-                ProductDetail(name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated"),
-                ProductDetail(name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated"),
-                ProductDetail(name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated")
-            ]),
-            SupplyItem(name: "Cheese", products: [
-                ProductDetail(name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated"),
-                ProductDetail(name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated")
-            ]),
-            SupplyItem(name: "Sour Cream", products: [
-                ProductDetail(name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated")
-            ])
-        ]),
-        CategoryItem(name: "Bakery", icon: "flame.fill", items: [
-            SupplyItem(name: "Bread", products: [
-                ProductDetail(name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder", notes: ""),
-                ProductDetail(name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre")
-            ]),
-            SupplyItem(name: "Bagels", products: [
-                ProductDetail(name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style", notes: "")
-            ])
-        ]),
-        CategoryItem(name: "Produce", icon: "leaf.fill", items: [
-            SupplyItem(name: "Apples", products: [
-                ProductDetail(name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith"),
-                ProductDetail(name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "")
-            ]),
-            SupplyItem(name: "Bananas", products: [
-                ProductDetail(name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita", notes: "")
-            ])
-        ]),
-        CategoryItem(name: "Cleaning", icon: "sparkles", items: [
-            SupplyItem(name: "Detergent", products: [
-                ProductDetail(name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide", notes: ""),
-                ProductDetail(name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent")
-            ]),
-            SupplyItem(name: "Dish Soap", products: [
-                ProductDetail(name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original")
-            ]),
-            SupplyItem(name: "Paper Towels", products: [
-                ProductDetail(name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size")
-            ])
-        ]),
-        CategoryItem(name: "Medication", icon: "cross.fill", items: [
-            SupplyItem(name: "Pain Relief", products: [
-                ProductDetail(name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food"),
-                ProductDetail(name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", notes: "")
-            ])
-        ])
-    ]
-}
-
 struct CategoriesScreenView: View {
     @Binding var currentScreen: AppScreen
     @State private var searchText = ""
-    @State private var categories: [CategoryItem] = CategoryItem.sampleData
+    @State private var categories: [CategoryItem] = []
 
     var filteredCategories: [CategoryItem] {
         guard !searchText.isEmpty else { return categories }
@@ -132,19 +51,6 @@ struct CategoriesScreenView: View {
                     .foregroundColor(.white)
                     .padding(.top, 10)
 
-                // Button(action: {}) {
-                //     Text("Add a new category")
-                //         .font(.system(size: 16, weight: .medium))
-                //         .foregroundColor(.white)
-                //         .padding(.horizontal, 28)
-                //         .padding(.vertical, 12)
-                //         .background(
-                //             Capsule()
-                //                 .fill(Color(hex: "#4A90E2").opacity(0.25))
-                //                 .overlay(Capsule().stroke(Color(hex: "#4A90E2"), lineWidth: 2))
-                //         )
-                // }
-                // .padding(.top, 6)
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -179,6 +85,10 @@ struct CategoriesScreenView: View {
             .padding(.bottom, 18)
         }
         .foregroundColor(.white)
+
+        .onAppear {
+            categories = DB.shared.fetchCategoriesTree()
+        }
     }
 
     private func toggleCategory(id: UUID) {
