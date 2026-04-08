@@ -41,6 +41,7 @@ struct TrackedItemRecord: Codable, FetchableRecord, PersistableRecord {
     var brand: String
     var notes: String
     var purchasedAt: String
+    var isTaxable: Bool
 
     init(
         productId: String,
@@ -49,7 +50,8 @@ struct TrackedItemRecord: Codable, FetchableRecord, PersistableRecord {
         unit: String,
         brand: String,
         notes: String = "",
-        purchasedAt: String
+        purchasedAt: String,
+        isTaxable: Bool
     ) {
         self.id = UUID().uuidString
         self.productId = productId
@@ -59,6 +61,7 @@ struct TrackedItemRecord: Codable, FetchableRecord, PersistableRecord {
         self.brand = brand
         self.notes = notes
         self.purchasedAt = purchasedAt
+        self.isTaxable = isTaxable
     }
 }
 
@@ -96,6 +99,7 @@ enum AppDatabase {
                 t.column("brand", .text).notNull()
                 t.column("notes", .text).notNull().defaults(to: "")
                 t.column("purchasedAt", .text).notNull()
+                t.column("isTaxable", .boolean).notNull().defaults(to: false)
             }
 
             try db.create(index: "idx_tracked_items_productId", on: "tracked_items", columns: ["productId"])
@@ -163,24 +167,24 @@ enum AppDatabase {
         }
 
         let trackedItems = [
-            TrackedItemRecord(productId: milkId.uuidString, name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: milkId.uuidString, name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: milkId.uuidString, name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: cheeseId.uuidString, name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: cheeseId.uuidString, name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: sourCreamId.uuidString, name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: breadId.uuidString, name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: breadId.uuidString, name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: bagelsId.uuidString, name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: applesId.uuidString, name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: applesId.uuidString, name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: bananasId.uuidString, name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: detergentId.uuidString, name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: detergentId.uuidString, name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: dishSoapId.uuidString, name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: paperTowelsId.uuidString, name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: painReliefId.uuidString, name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food", purchasedAt: purchaseDate),
-            TrackedItemRecord(productId: painReliefId.uuidString, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", purchasedAt: purchaseDate)
+            TrackedItemRecord(productId: milkId.uuidString, name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: milkId.uuidString, name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: milkId.uuidString, name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: cheeseId.uuidString, name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: cheeseId.uuidString, name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: sourCreamId.uuidString, name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: breadId.uuidString, name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: breadId.uuidString, name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: bagelsId.uuidString, name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: applesId.uuidString, name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: applesId.uuidString, name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: bananasId.uuidString, name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: detergentId.uuidString, name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide", purchasedAt: purchaseDate, isTaxable: true),
+            TrackedItemRecord(productId: detergentId.uuidString, name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent", purchasedAt: purchaseDate, isTaxable: true),
+            TrackedItemRecord(productId: dishSoapId.uuidString, name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original", purchasedAt: purchaseDate, isTaxable: true),
+            TrackedItemRecord(productId: paperTowelsId.uuidString, name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size", purchasedAt: purchaseDate, isTaxable: true),
+            TrackedItemRecord(productId: painReliefId.uuidString, name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food", purchasedAt: purchaseDate, isTaxable: false),
+            TrackedItemRecord(productId: painReliefId.uuidString, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", purchasedAt: purchaseDate, isTaxable: false)
         ]
 
         for var trackedItem in trackedItems {
@@ -243,6 +247,7 @@ final class DB {
             brand TEXT NOT NULL,
             notes TEXT NOT NULL DEFAULT '',
             purchasedAt TEXT NOT NULL,
+            isTaxable INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (productId) REFERENCES products(id) ON DELETE CASCADE
         );
         """
@@ -259,8 +264,9 @@ final class DB {
         let hasLegacySuppliesTable = tableExists("supplies")
         let productsUsesOldSchema = tableExists("products") && !tableHasColumn(table: "products", column: "categoryId")
         let missingTrackedItemsTable = !tableExists("tracked_items")
+        let trackedItemsMissingTaxFlag = tableExists("tracked_items") && !tableHasColumn(table: "tracked_items", column: "isTaxable")
 
-        guard hasLegacySuppliesTable || productsUsesOldSchema || missingTrackedItemsTable else {
+        guard hasLegacySuppliesTable || productsUsesOldSchema || missingTrackedItemsTable || trackedItemsMissingTaxFlag else {
             return
         }
 
@@ -325,8 +331,8 @@ final class DB {
 
     func insertTrackedItem(_ trackedItem: TrackedItem, productID: String) {
         let sql = """
-        INSERT INTO tracked_items (id, productId, name, price, unit, brand, notes, purchasedAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO tracked_items (id, productId, name, price, unit, brand, notes, purchasedAt, isTaxable)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
         """
 
         var stmt: OpaquePointer?
@@ -340,8 +346,23 @@ final class DB {
         sqlite3_bind_text(stmt, 6, trackedItem.brand.cString(using: .utf8), -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 7, trackedItem.notes.cString(using: .utf8), -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 8, trackedItem.purchasedAt.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_int(stmt, 9, trackedItem.isTaxable ? 1 : 0)
 
         stepAndFinalize(stmt)
+    }
+
+    func insertTrackedShoppingItem(_ item: TrackedShoppingItem, purchasedAt: String) {
+        let trackedItem = TrackedItem(
+            name: item.itemName.isEmpty ? item.productName : item.itemName,
+            price: item.priceValue,
+            unit: item.unit,
+            brand: item.brand,
+            notes: item.notes,
+            purchasedAt: purchasedAt,
+            isTaxable: item.taxable
+        )
+
+        insertTrackedItem(trackedItem, productID: item.productID.uuidString)
     }
 
     func fetchCategoriesTree() -> [CategoryItem] {
@@ -418,7 +439,7 @@ final class DB {
         var result: [TrackedItem] = []
 
         let sql = """
-        SELECT id, name, price, unit, brand, notes, purchasedAt
+        SELECT id, name, price, unit, brand, notes, purchasedAt, isTaxable
         FROM tracked_items
         WHERE productId = ?
         ORDER BY purchasedAt DESC, name;
@@ -436,6 +457,7 @@ final class DB {
             let brand = string(from: stmt, at: 4) ?? ""
             let notes = string(from: stmt, at: 5) ?? ""
             let purchasedAt = string(from: stmt, at: 6) ?? ""
+            let isTaxable = sqlite3_column_int(stmt, 7) == 1
 
             let trackedItem = TrackedItem(
                 id: UUID(uuidString: id) ?? UUID(),
@@ -444,7 +466,8 @@ final class DB {
                 unit: unit,
                 brand: brand,
                 notes: notes,
-                purchasedAt: purchasedAt
+                purchasedAt: purchasedAt,
+                isTaxable: isTaxable
             )
 
             result.append(trackedItem)

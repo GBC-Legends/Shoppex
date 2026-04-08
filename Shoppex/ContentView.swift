@@ -32,6 +32,7 @@ extension Color {
 
 struct ContentView: View {
     @State private var currentScreen: AppScreen = .home
+    @StateObject private var shoppingStore = ShoppingStore()
 
     var body: some View {
         ZStack {
@@ -52,6 +53,7 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
+        .environmentObject(shoppingStore)
     }
 }
 

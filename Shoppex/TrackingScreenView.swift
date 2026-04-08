@@ -2,53 +2,22 @@ import SwiftUI
 
 struct TrackingScreenView: View {
     @Binding var currentScreen: AppScreen
-
-    @State private var selectedProvince = "Ontario"
-
-    @State private var summaryItems: [SummaryTrackedItem] = [
-        SummaryTrackedItem(name: "Apples", price: "0.00", taxable: false),
-        SummaryTrackedItem(name: "Pizza", price: "0.00", taxable: true),
-        SummaryTrackedItem(name: "Detergent", price: "0.00", taxable: true)
-    ]
-
-    let provinces: [String: Double] = [
-        "Alberta": 0.05,
-        "British Columbia": 0.12,
-        "Manitoba": 0.12,
-        "New Brunswick": 0.15,
-        "Newfoundland and Labrador": 0.15,
-        "Northwest Territories": 0.05,
-        "Nova Scotia": 0.14,
-        "Nunavut": 0.05,
-        "Ontario": 0.13,
-        "Prince Edward Island": 0.15,
-        "Quebec": 0.14975,
-        "Saskatchewan": 0.11,
-        "Yukon": 0.05
-    ]
+    @EnvironmentObject private var shoppingStore: ShoppingStore
 
     var subtotal: Double {
-        summaryItems.reduce(0) { total, item in
-            total + (Double(item.price) ?? 0)
-        }
+        shoppingStore.subtotal()
     }
 
     var taxAmount: Double {
-        let rate = provinces[selectedProvince] ?? 0
-        let taxableTotal = summaryItems
-            .filter { $0.taxable }
-            .reduce(0) { total, item in
-                total + (Double(item.price) ?? 0)
-            }
-        return taxableTotal * rate
+        shoppingStore.taxAmount()
     }
 
     var total: Double {
-        subtotal + taxAmount
+        shoppingStore.total()
     }
 
     var taxRateText: String {
-        String(format: "%.2f%%", (provinces[selectedProvince] ?? 0) * 100)
+        shoppingStore.currentTaxRateText()
     }
 
     var taxAmountText: String {
@@ -57,35 +26,34 @@ struct TrackingScreenView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-
             VStack(spacing: 18) {
                 Spacer().frame(height: 40)
 
-                Text("Summary")
+                Text("Shopping")
                     .font(.system(size: 28, weight: .regular, design: .serif))
                     .foregroundColor(.white)
 
-                    VStack(spacing: 12) {
-                        if summaryItems.isEmpty {
-                            VStack(spacing: 10) {
-                                Text("Cart is empty")
-                                    .font(.system(size: 20, weight: .regular, design: .serif))
-                                    .foregroundColor(.white.opacity(0.8))
+                VStack(spacing: 12) {
+                    if shoppingStore.draftItems.isEmpty {
+                        VStack(spacing: 10) {
+                            Text("Shopping list is empty")
+                                .font(.system(size: 20, weight: .regular, design: .serif))
+                                .foregroundColor(.white.opacity(0.8))
 
-                                Text("Add products using +")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                            .padding(.top, 30)
-                        } else {
-                            ForEach($summaryItems) { $product in
-                                TrackingRow(item: $product) {
-                                    summaryItems.removeAll { $0.id == product.id }
-                                }
+                            Text("Add products from Categories")
+                                .font(.system(size: 14))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                        .padding(.top, 30)
+                    } else {
+                        ForEach($shoppingStore.draftItems) { $item in
+                            TrackingRow(item: $item) {
+                                shoppingStore.removeDraftItem(id: item.id)
                             }
                         }
                     }
-                    .padding(.horizontal, 24)
+                }
+                .padding(.horizontal, 24)
 
                 Divider()
                     .background(Color.white.opacity(0.3))
@@ -97,8 +65,8 @@ struct TrackingScreenView: View {
 
                     Spacer()
 
-                    Picker("", selection: $selectedProvince) {
-                        ForEach(provinces.keys.sorted(), id: \.self) { province in
+                    Picker("", selection: $shoppingStore.selectedProvince) {
+                        ForEach(ShoppingStore.provinceRates.keys.sorted(), id: \.self) { province in
                             Text(province)
                         }
                     }
@@ -116,7 +84,39 @@ struct TrackingScreenView: View {
                 }
                 .padding(.horizontal, 24)
 
-                Spacer()
+                Button(action: shoppingStore.saveCurrentShopping) {
+                    Text("Save Shopping")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(shoppingStore.draftItems.isEmpty ? Color.white.opacity(0.08) : Color(hex: "#0A84FF"))
+                        )
+                }
+                .buttonStyle(.plain)
+                .disabled(shoppingStore.draftItems.isEmpty)
+                .padding(.horizontal, 24)
+
+                if !shoppingStore.savedShoppings.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Saved Shoppings")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white)
+
+                            ForEach(shoppingStore.savedShoppings) { shopping in
+                                SavedShoppingCard(shopping: shopping)
+                            }
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 6)
+                        .padding(.bottom, 12)
+                    }
+                } else {
+                    Spacer()
+                }
 
                 HStack {
                     Text("Total")
@@ -146,23 +146,37 @@ struct TrackingScreenView: View {
     }
 }
 
-struct SummaryTrackedItem: Identifiable {
-    let id = UUID()
-    let name: String
-    var price: String
-    var taxable: Bool
-}
-
 struct TrackingRow: View {
-    @Binding var item: SummaryTrackedItem
+    @Binding var item: TrackedShoppingItem
     var onDelete: () -> Void
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.name)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(item.productName)
                     .font(.system(size: 18, design: .serif))
                     .foregroundColor(.white)
+
+                TextField("Item details", text: $item.itemName, prompt: Text("Describe purchase, e.g. Gala Apples 1.5kg").foregroundColor(.white.opacity(0.35)))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+
+                TextField("Brand", text: $item.brand, prompt: Text("Brand").foregroundColor(.white.opacity(0.35)))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+
+                TextField("Unit / size", text: $item.unit, prompt: Text("Unit / size").foregroundColor(.white.opacity(0.35)))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
 
                 Button {
                     item.taxable.toggle()
@@ -178,39 +192,104 @@ struct TrackingRow: View {
                         )
                 }
                 .buttonStyle(.plain)
+
+                TextField("Notes", text: $item.notes, prompt: Text("Add notes").foregroundColor(.white.opacity(0.35)))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
             }
 
             Spacer()
 
-            HStack(spacing: 4) {
-                Text("$")
-                    .foregroundColor(.white.opacity(0.7))
+            VStack(alignment: .trailing, spacing: 10) {
+                HStack(spacing: 4) {
+                    Text("$")
+                        .foregroundColor(.white.opacity(0.7))
 
-                TextField("", text: $item.price)
-                    .keyboardType(.decimalPad)
-                    .frame(width: 60)
-                    .foregroundColor(.white)
-                    .multilineTextAlignment(.trailing)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.12))
-            .cornerRadius(8)
+                    TextField("", text: $item.price)
+                        .keyboardType(.decimalPad)
+                        .frame(width: 72)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.trailing)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.12))
+                .cornerRadius(8)
 
-            Button {
-                onDelete()
-            } label: {
-                Image(systemName: "trash.fill")
-                    .foregroundColor(.white)
-                    .padding(10)
-                    .background(Color.red)
-                    .clipShape(Circle())
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash.fill")
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                }
             }
-            .padding(.leading, 8)
         }
         .padding()
         .background(Color.white.opacity(0.05))
         .cornerRadius(14)
+    }
+}
+
+struct SavedShoppingCard: View {
+    let shopping: TrackedShopping
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(shopping.purchasedAt)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+
+                    Text(shopping.province)
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.5))
+                }
+
+                Spacer()
+
+                Text(String(format: "$%.2f", shopping.total(provinceRates: ShoppingStore.provinceRates)))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(Color(hex: "#4A90E2"))
+            }
+
+            ForEach(shopping.items) { item in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.productName)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
+
+                        if !item.itemName.isEmpty {
+                            Text(item.itemName)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.6))
+                        }
+
+                        if !item.notes.isEmpty {
+                            Text(item.notes)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.45))
+                        }
+                    }
+
+                    Spacer()
+
+                    Text(String(format: "$%.2f", item.priceValue))
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.85))
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(16)
     }
 }
 

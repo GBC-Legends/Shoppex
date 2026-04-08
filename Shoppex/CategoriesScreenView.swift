@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CategoriesScreenView: View {
     @Binding var currentScreen: AppScreen
+    @EnvironmentObject private var shoppingStore: ShoppingStore
     @State private var searchText = ""
     @State private var categories: [CategoryItem] = []
 
@@ -72,7 +73,8 @@ struct CategoriesScreenView: View {
                                 },
                                 onToggleProduct: { productID in
                                     toggleProduct(categoryID: filteredCategories[catIndex].id, productID: productID)
-                                }
+                                },
+                                onAddProduct: addProductToShopping
                             )
                         }
                     }
@@ -98,6 +100,9 @@ struct CategoriesScreenView: View {
         .onAppear {
             categories = DB.shared.fetchCategoriesTree()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .trackedItemsDidChange)) { _ in
+            categories = DB.shared.fetchCategoriesTree()
+        }
     }
 
     private func toggleCategory(id: UUID) {
@@ -116,12 +121,20 @@ struct CategoriesScreenView: View {
             }
         }
     }
+
+    private func addProductToShopping(_ product: ProductItem) {
+        shoppingStore.addProduct(product)
+        withAnimation(.easeInOut) {
+            currentScreen = .tracking
+        }
+    }
 }
 
 struct CategoryAccordionRow: View {
     let category: CategoryItem
     let onToggleCategory: () -> Void
     let onToggleProduct: (UUID) -> Void
+    let onAddProduct: (ProductItem) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -161,7 +174,8 @@ struct CategoryAccordionRow: View {
                     ForEach(category.products) { product in
                         ProductAccordionRow(
                             product: product,
-                            onToggle: { onToggleProduct(product.id) }
+                            onToggle: { onToggleProduct(product.id) },
+                            onAdd: { onAddProduct(product) }
                         )
                         .padding(.leading, 16)
                     }
@@ -183,30 +197,41 @@ struct CategoryAccordionRow: View {
 struct ProductAccordionRow: View {
     let product: ProductItem
     let onToggle: () -> Void
+    let onAdd: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            Button(action: onToggle) {
-                HStack {
-                    Text(product.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+            HStack {
+                Button(action: onToggle) {
+                    HStack {
+                        Text(product.name)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white.opacity(0.9))
 
-                    Spacer()
+                        Spacer()
 
-                    Text("\(product.trackedItems.count) purchases")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.35))
+                        Text("\(product.trackedItems.count) purchases")
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.35))
 
-                    Image(systemName: product.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
-                        .animation(.easeInOut(duration: 0.2), value: product.isExpanded)
+                        Image(systemName: product.isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.white.opacity(0.4))
+                            .animation(.easeInOut(duration: 0.2), value: product.isExpanded)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 13)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
+                .buttonStyle(PlainButtonStyle())
+
+                Button(action: onAdd) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundColor(Color(hex: "#0A84FF"))
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 14)
             }
-            .buttonStyle(PlainButtonStyle())
 
             Divider()
                 .background(Color.white.opacity(0.07))
@@ -254,24 +279,20 @@ struct TrackedItemRow: View {
                     .font(.system(size: 12))
                     .foregroundColor(.white.opacity(0.4))
 
-                Text(String(format: "$%.2f  ($%.2f with HST)", trackedItem.price, trackedItem.priceWithTax))
+                Text(String(format: "$%.2f", trackedItem.price))
                     .font(.system(size: 12))
                     .foregroundColor(Color(hex: "#4A90E2"))
+
+                Text(trackedItem.isTaxable ? "Taxable item" : "Non-taxable item")
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.45))
             }
 
             Spacer()
 
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(trackedItem.unit)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.35))
-
-                Button(action: {}) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(Color(hex: "#0A84FF"))
-                }
-            }
+            Text(trackedItem.unit)
+                .font(.system(size: 11))
+                .foregroundColor(.white.opacity(0.35))
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
