@@ -146,16 +146,9 @@ struct TrackingRow: View {
         VStack(spacing: 10) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
-                    Button {
-                        withAnimation(.easeInOut) {
-                            isExpanded.toggle()
-                        }
-                    } label: {
-                        Text(item.productName)
-                            .font(.system(size: 18, design: .serif))
-                            .foregroundColor(.white)
-                    }
-                    .buttonStyle(.plain)
+                    Text(item.productName)
+                        .font(.system(size: 18, design: .serif))
+                        .foregroundColor(.white)
 
                     Button {
                         item.taxable.toggle()
@@ -174,6 +167,18 @@ struct TrackingRow: View {
                 }
 
                 Spacer()
+
+                Button {
+                    withAnimation(.easeInOut) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.white.opacity(0.7))
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
 
                 HStack(spacing: 4) {
                     Text("$")
