@@ -152,6 +152,7 @@ final class ShoppingStore: ObservableObject {
     @Published var selectedProvince = "Ontario"
     @Published var draftItems: [TrackedShoppingItem] = []
     @Published var savedShoppings: [TrackedShopping] = []
+    @Published var editingShoppingID: UUID?
 
     init() {
         loadSavedShoppings()
@@ -185,24 +186,41 @@ final class ShoppingStore: ObservableObject {
         let purchaseDate = currentDateString()
         let itemsToSave = draftItems
 
-        for item in itemsToSave {
-            DB.shared.insertTrackedShoppingItem(item, purchasedAt: purchaseDate)
+        if let editingID = editingShoppingID,
+           let oldShopping = savedShoppings.first(where: { $0.id == editingID }) {
+            deleteShopping(oldShopping)
+        }
+
+        let savedItems = itemsToSave.map { item -> TrackedShoppingItem in
+            let newID = DB.shared.insertTrackedShoppingItem(item, purchasedAt: purchaseDate)
+
+            return TrackedShoppingItem(
+                id: item.id,
+                productID: item.productID,
+                trackedItemID: newID,
+                productName: item.productName,
+                itemName: item.itemName,
+                unit: item.unit,
+                brand: item.brand,
+                price: item.price,
+                notes: item.notes,
+                taxable: item.taxable
+            )
         }
 
         let shopping = TrackedShopping(
             province: selectedProvince,
             purchasedAt: purchaseDate,
-            items: itemsToSave
+            items: savedItems
         )
 
         savedShoppings.insert(shopping, at: 0)
+
         draftItems = []
+        editingShoppingID = nil
+
         persistSavedShoppings()
         NotificationCenter.default.post(name: .trackedItemsDidChange, object: nil)
-    }
-
-    func currentTaxRateText() -> String {
-        String(format: "%.2f%%", (Self.provinceRates[selectedProvince] ?? 0) * 100)
     }
 
     private func currentDateString() -> String {
@@ -224,5 +242,35 @@ final class ShoppingStore: ObservableObject {
         }
 
         savedShoppings = decoded
+    }
+
+    func currentMonthTotal() -> Double {
+        let currentMonth = currentDateString().prefix(7)
+
+        return savedShoppings
+            .filter { $0.purchasedAt.hasPrefix(currentMonth) }
+            .reduce(0) { $0 + $1.total(provinceRates: Self.provinceRates) }
+    }
+
+    func currentMonthPercent(of budget: Double = 500) -> Int {
+        guard budget > 0 else { return 0 }
+        return Int((currentMonthTotal() / budget) * 100)
+    }
+
+    func deleteShopping(_ shopping: TrackedShopping) {
+        for item in shopping.items {
+            if let trackedID = item.trackedItemID {
+                DB.shared.deleteTrackedItem(id: trackedID)
+            }
+        }
+
+        savedShoppings.removeAll {$0.id == shopping.id}
+        persistSavedShoppings()
+    }
+
+    func editShopping(_ shopping: TrackedShopping) {
+        draftItems = shopping.items
+        selectedProvince = shopping.province
+        editingShoppingID = shopping.id
     }
 }

@@ -132,7 +132,7 @@ enum AppDatabase {
             CategoryRecord(id: medicationId.uuidString, name: "Medication", icon: "cross.fill")
         ]
 
-        for var category in categories {
+        for category in categories {
             try category.insert(db)
         }
 
@@ -162,7 +162,7 @@ enum AppDatabase {
             ProductRecord(id: painReliefId.uuidString, categoryId: medicationId.uuidString, name: "Pain Relief")
         ]
 
-        for var product in products {
+        for product in products {
             try product.insert(db)
         }
 
@@ -187,7 +187,7 @@ enum AppDatabase {
             TrackedItemRecord(productId: painReliefId.uuidString, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", purchasedAt: purchaseDate, isTaxable: false)
         ]
 
-        for var trackedItem in trackedItems {
+        for trackedItem in trackedItems {
             try trackedItem.insert(db)
         }
     }
@@ -351,8 +351,11 @@ final class DB {
         stepAndFinalize(stmt)
     }
 
-    func insertTrackedShoppingItem(_ item: TrackedShoppingItem, purchasedAt: String) {
+    func insertTrackedShoppingItem(_ item: TrackedShoppingItem, purchasedAt: String) -> UUID {
+        let newID = UUID()
+
         let trackedItem = TrackedItem(
+            id: newID,
             name: item.itemName.isEmpty ? item.productName : item.itemName,
             price: item.priceValue,
             unit: item.unit,
@@ -363,6 +366,7 @@ final class DB {
         )
 
         insertTrackedItem(trackedItem, productID: item.productID.uuidString)
+        return newID
     }
 
     func fetchCategoriesTree() -> [CategoryItem] {
@@ -563,5 +567,15 @@ final class DB {
     private func string(from stmt: OpaquePointer?, at index: Int32) -> String? {
         guard let cString = sqlite3_column_text(stmt, index) else { return nil }
         return String(cString: cString)
+    }
+
+    func deleteTrackedItem(id: UUID) {
+        let sql = "DELETE FROM tracked_items WHERE id = ?;"
+        var stmt: OpaquePointer?
+
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
+        sqlite3_bind_text(stmt, 1, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+
+        stepAndFinalize(stmt)
     }
 }

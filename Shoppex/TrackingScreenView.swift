@@ -26,96 +26,97 @@ struct TrackingScreenView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 18) {
-                Spacer().frame(height: 40)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 18) {
+                    Spacer().frame(height: 40)
 
-                Text("Shopping")
-                    .font(.system(size: 28, weight: .regular, design: .serif))
-                    .foregroundColor(.white)
+                    Text(shoppingStore.editingShoppingID == nil ? "Shopping" : "Edit Receipt")
+                        .font(.system(size: 28, weight: .regular, design: .serif))
+                        .foregroundColor(.white)
 
-                VStack(spacing: 12) {
-                    if shoppingStore.draftItems.isEmpty {
-                        VStack(spacing: 10) {
-                            Text("Shopping list is empty")
-                                .font(.system(size: 20, weight: .regular, design: .serif))
-                                .foregroundColor(.white.opacity(0.8))
+                    VStack(spacing: 12) {
+                        if shoppingStore.draftItems.isEmpty {
+                            VStack(spacing: 10) {
+                                Text("Shopping list is empty")
+                                    .font(.system(size: 20, weight: .regular, design: .serif))
+                                    .foregroundColor(.white.opacity(0.8))
 
-                            Text("Add products from Categories")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.5))
-                        }
-                        .padding(.top, 30)
-                    } else {
-                        ForEach($shoppingStore.draftItems) { $item in
-                            TrackingRow(item: $item) {
-                                shoppingStore.removeDraftItem(id: item.id)
+                                Text("Add products from Categories")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
+                            .padding(.top, 30)
+                        } else {
+                            ForEach($shoppingStore.draftItems) { $item in
+                                TrackingRow(item: $item) {
+                                    shoppingStore.removeDraftItem(id: item.id)
+                                }
                             }
                         }
                     }
-                }
-                .padding(.horizontal, 24)
-
-                Divider()
-                    .background(Color.white.opacity(0.3))
                     .padding(.horizontal, 24)
 
-                HStack {
-                    Text("Province")
-                        .foregroundColor(.white.opacity(0.85))
+                    Divider()
+                        .background(Color.white.opacity(0.3))
+                        .padding(.horizontal, 24)
 
-                    Spacer()
+                    HStack {
+                        Text("Province")
+                            .foregroundColor(.white.opacity(0.85))
 
-                    Picker("", selection: $shoppingStore.selectedProvince) {
-                        ForEach(ShoppingStore.provinceRates.keys.sorted(), id: \.self) { province in
-                            Text(province)
+                        Spacer()
+
+                        Picker("", selection: $shoppingStore.selectedProvince) {
+                            ForEach(ShoppingStore.provinceRates.keys.sorted(), id: \.self) { province in
+                                Text(province)
+                            }
                         }
+                        .pickerStyle(MenuPickerStyle())
                     }
-                    .pickerStyle(MenuPickerStyle())
-                }
-                .padding(.horizontal, 24)
+                    .padding(.horizontal, 24)
 
-                VStack(spacing: 10) {
-                    SummaryRow(title: "Subtotal", value: String(format: "$%.2f", subtotal))
+                    VStack(spacing: 10) {
+                        SummaryRow(title: "Subtotal", value: String(format: "$%.2f", subtotal))
 
-                    SummaryRow(
-                        title: "Sales Tax",
-                        value: "\(taxRateText)   \(taxAmountText)"
-                    )
-                }
-                .padding(.horizontal, 24)
-
-                Button(action: shoppingStore.saveCurrentShopping) {
-                    Text("Save Shopping")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(shoppingStore.draftItems.isEmpty ? Color.white.opacity(0.08) : Color(hex: "#0A84FF"))
+                        SummaryRow(
+                            title: "Sales Tax",
+                            value: "\(taxRateText)   \(taxAmountText)"
                         )
+                    }
+                    .padding(.horizontal, 24)
+
+                    Button(action: shoppingStore.saveCurrentShopping) {
+                        Text("Save Shopping")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(shoppingStore.draftItems.isEmpty ? Color.white.opacity(0.08) : Color(hex: "#0A84FF"))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(shoppingStore.draftItems.isEmpty)
+                    .padding(.horizontal, 24)
+
+                    Spacer().frame(height: 28)
+
+                    HStack {
+                        Text("Total")
+                            .font(.system(size: 26, weight: .regular, design: .serif))
+                            .foregroundColor(.white)
+
+                        Spacer()
+
+                        Text(String(format: "$%.2f", total))
+                            .font(.system(size: 26, weight: .regular, design: .serif))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
                 }
-                .buttonStyle(.plain)
-                .disabled(shoppingStore.draftItems.isEmpty)
-                .padding(.horizontal, 24)
-
-                Spacer()
-
-                HStack {
-                    Text("Total")
-                        .font(.system(size: 26, weight: .regular, design: .serif))
-                        .foregroundColor(.white)
-
-                    Spacer()
-
-                    Text(String(format: "$%.2f", total))
-                        .font(.system(size: 26, weight: .regular, design: .serif))
-                        .foregroundColor(.white)
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             BottomBar(
                 onHome: { withAnimation(.easeInOut) { currentScreen = .home } },
@@ -256,6 +257,8 @@ struct TrackingRow: View {
 
 struct SavedShoppingCard: View {
     let shopping: TrackedShopping
+    var onDelete: () -> Void
+    var onEdit: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -275,6 +278,25 @@ struct SavedShoppingCard: View {
                 Text(String(format: "$%.2f", shopping.total(provinceRates: ShoppingStore.provinceRates)))
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(Color(hex: "#4A90E2"))
+
+                Button {
+                    onEdit()
+                } label: {
+                    Image(systemName: "pencil")
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.blue)
+                        .clipShape(Circle())
+                }
+                Button {
+                    onDelete()
+                } label: {
+                    Image(systemName: "trash.fill")
+                        .foregroundColor(.white)
+                        .padding(8)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                }
             }
 
             ForEach(shopping.items) { item in

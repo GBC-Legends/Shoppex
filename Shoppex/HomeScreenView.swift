@@ -12,12 +12,13 @@ struct HomeScreenView: View {
                 CircleWidget()
 
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("This month you have\nspent 25% of your budget")
-                        .font(.system(size: 34, weight: .regular, design: .serif))
+                    Text("This month you have spent $\(String(format: "%.2f", shoppingStore.currentMonthTotal()))")
+                        .font(.system(size: 28, weight: .regular, design: .serif))
                         .foregroundColor(.white)
-                        .lineSpacing(6)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                    Text("That’s 5% less than this time last month.\nKeep it up!")
+                        Text("\(shoppingStore.savedShoppings.count) saved receipts this month")
                         .font(.system(size: 18, weight: .regular, design: .serif))
                         .foregroundColor(.white.opacity(0.85))
                         .lineSpacing(4)
@@ -25,7 +26,7 @@ struct HomeScreenView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
 
-                SavedShoppingsSection(shoppings: shoppingStore.savedShoppings)
+                SavedShoppingsSection(currentScreen: $currentScreen)
                     .padding(.horizontal, 24)
 
                 Text("click + to start tracking products")
@@ -49,15 +50,16 @@ struct HomeScreenView: View {
 }
 
 private struct SavedShoppingsSection: View {
-    let shoppings: [TrackedShopping]
+    @Binding var currentScreen: AppScreen
+    @EnvironmentObject private var shoppingStore: ShoppingStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Saved Shoppings")
+            Text("Saved Receipts")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundColor(.white)
 
-            if shoppings.isEmpty {
+            if shoppingStore.savedShoppings.isEmpty {
                 RoundedRectangle(cornerRadius: 18)
                     .fill(Color.white.opacity(0.06))
                     .frame(height: 110)
@@ -69,8 +71,17 @@ private struct SavedShoppingsSection: View {
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 12) {
-                        ForEach(shoppings) { shopping in
-                            SavedShoppingCard(shopping: shopping)
+                        ForEach(shoppingStore.savedShoppings) { shopping in
+                            SavedShoppingCard(
+                                shopping: shopping,
+                                onDelete: {
+                                    shoppingStore.deleteShopping(shopping)
+                                },
+                                onEdit: {
+                                    shoppingStore.editShopping(shopping)
+                                    currentScreen = .tracking
+                                }
+                            )
                         }
                     }
                     .padding(.trailing, 6)
@@ -82,7 +93,6 @@ private struct SavedShoppingsSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
-
 
 private struct CircleWidget: View {
     var body: some View {
