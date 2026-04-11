@@ -133,67 +133,48 @@ struct TrackingRow: View {
     @Binding var item: TrackedShoppingItem
     var onDelete: () -> Void
 
+    @State private var isExpanded = false
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(item.productName)
-                    .font(.system(size: 18, design: .serif))
-                    .foregroundColor(.white)
+        VStack(spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Button {
+                        withAnimation(.easeInOut) {
+                            isExpanded.toggle()
+                        }
+                    } label: {
+                        Text(item.productName)
+                            .font(.system(size: 18, design: .serif))
+                            .foregroundColor(.white)
+                    }
+                    .buttonStyle(.plain)
 
-                TextField("Item details", text: $item.itemName, prompt: Text("Describe purchase, e.g. Gala Apples 1.5kg").foregroundColor(.white.opacity(0.35)))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(8)
-
-                TextField("Brand", text: $item.brand, prompt: Text("Brand").foregroundColor(.white.opacity(0.35)))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(8)
-
-                TextField("Unit / size", text: $item.unit, prompt: Text("Unit / size").foregroundColor(.white.opacity(0.35)))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(8)
-
-                Button {
-                    item.taxable.toggle()
-                } label: {
-                    Text(item.taxable ? "Taxable" : "Non-taxable")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(
-                            Capsule()
-                                .fill(item.taxable ? Color.green.opacity(0.35) : Color.gray.opacity(0.35))
-                        )
+                    Button {
+                        item.taxable.toggle()
+                    } label: {
+                        Text(item.taxable ? "Taxable" : "Non-taxable")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(item.taxable ? Color.green.opacity(0.35) : Color.gray.opacity(0.35))
+                            )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
-                TextField("Notes", text: $item.notes, prompt: Text("Add notes").foregroundColor(.white.opacity(0.35)))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.08))
-                    .cornerRadius(8)
-            }
+                Spacer()
 
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 10) {
                 HStack(spacing: 4) {
                     Text("$")
                         .foregroundColor(.white.opacity(0.7))
 
                     TextField("", text: $item.price)
                         .keyboardType(.decimalPad)
-                        .frame(width: 72)
+                        .frame(width: 50)
                         .foregroundColor(.white)
                         .multilineTextAlignment(.trailing)
                 }
@@ -201,6 +182,7 @@ struct TrackingRow: View {
                 .padding(.vertical, 6)
                 .background(Color.white.opacity(0.12))
                 .cornerRadius(8)
+                .frame(width: 92)
 
                 Button {
                     onDelete()
@@ -210,6 +192,59 @@ struct TrackingRow: View {
                         .padding(10)
                         .background(Color.red)
                         .clipShape(Circle())
+                }
+                .padding(.leading, 8)
+            }
+
+            if isExpanded {
+                VStack(spacing: 8) {
+                    TextField(
+                        "Describe purchase",
+                        text: $item.itemName,
+                        prompt: Text("Description")
+                            .foregroundColor(.white.opacity(0.35))
+                    )
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+
+                    TextField(
+                        "Brand",
+                        text: $item.brand,
+                        prompt: Text("Brand")
+                            .foregroundColor(.white.opacity(0.35))
+                    )
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+
+                    TextField(
+                        "Quantity / size",
+                        text: $item.unit,
+                        prompt: Text("Quantity / size")
+                            .foregroundColor(.white.opacity(0.35))
+                    )
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
+
+                    TextField(
+                        "Add notes",
+                        text: $item.notes,
+                        prompt: Text("Add notes")
+                            .foregroundColor(.white.opacity(0.35))
+                    )
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.08))
+                    .cornerRadius(8)
                 }
             }
         }

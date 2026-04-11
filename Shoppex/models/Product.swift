@@ -85,8 +85,13 @@ struct TrackedShoppingItem: Identifiable, Codable {
         )
     }
 
+    var quantityValue: Double {
+        Double(unit.replacingOccurrences(of: ",", with: ".")) ?? 1
+    }
+
     var priceValue: Double {
-        Double(price.replacingOccurrences(of: ",", with: ".")) ?? 0
+        let basePrice = Double(price.replacingOccurrences(of: ",", with: ".")) ?? 0
+        return basePrice * quantityValue
     }
 }
 
