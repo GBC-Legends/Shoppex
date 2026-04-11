@@ -51,6 +51,9 @@ struct TrackingScreenView: View {
                                 TrackingRow(item: $item) {
                                     shoppingStore.removeDraftItem(id: item.id)
                                 }
+                                .onChange(of: item) {
+                                    shoppingStore.updateDraft()
+                                }
                             }
                         }
                     }
@@ -72,6 +75,9 @@ struct TrackingScreenView: View {
                             }
                         }
                         .pickerStyle(MenuPickerStyle())
+                        .onChange(of: shoppingStore.selectedProvince) {
+                            shoppingStore.persistSelectedProvince()
+                        }
                     }
                     .padding(.horizontal, 24)
 

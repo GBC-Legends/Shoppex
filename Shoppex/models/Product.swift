@@ -36,7 +36,7 @@ struct TrackedItem: Identifiable, Codable {
     }
 }
 
-struct TrackedShoppingItem: Identifiable, Codable {
+struct TrackedShoppingItem: Identifiable, Codable, Equatable {
     let id: UUID
     let productID: UUID
     let trackedItemID: UUID?
@@ -131,6 +131,8 @@ struct TrackedShopping: Identifiable, Codable {
 final class ShoppingStore: ObservableObject {
     private enum StorageKey {
         static let savedShoppings = "saved_shoppings"
+        static let draftItems = "draft_items"
+        static let selectedProvince = "selected_province"
     }
 
     static let provinceRates: [String: Double] = [
@@ -156,14 +158,18 @@ final class ShoppingStore: ObservableObject {
 
     init() {
         loadSavedShoppings()
+        loadDraftItems()
+        loadSelectedProvince()
     }
 
     func addProduct(_ product: ProductItem) {
         draftItems.append(TrackedShoppingItem(productID: product.id, productName: product.name))
+        persistDraftItems()
     }
 
     func removeDraftItem(id: UUID) {
         draftItems.removeAll { $0.id == id }
+        persistDraftItems()
     }
 
     func subtotal() -> Double {
@@ -217,10 +223,16 @@ final class ShoppingStore: ObservableObject {
         savedShoppings.insert(shopping, at: 0)
 
         draftItems = []
+        persistDraftItems()
         editingShoppingID = nil
 
         persistSavedShoppings()
         NotificationCenter.default.post(name: .trackedItemsDidChange, object: nil)
+    }
+
+    func currentTaxRateText() -> String {
+        let rate = (Self.provinceRates[selectedProvince] ?? 0) * 100
+        return "\(rate)%"
     }
 
     private func currentDateString() -> String {
@@ -272,5 +284,35 @@ final class ShoppingStore: ObservableObject {
         draftItems = shopping.items
         selectedProvince = shopping.province
         editingShoppingID = shopping.id
+        persistDraftItems()
+        persistSelectedProvince()
+    }
+
+    func persistDraftItems() {
+        guard let data = try? JSONEncoder().encode(draftItems) else { return }
+        UserDefaults.standard.set(data, forKey: StorageKey.draftItems)
+    }
+
+    func loadDraftItems() {
+        guard let data = UserDefaults.standard.data(forKey: StorageKey.draftItems),
+              let decoded = try? JSONDecoder().decode([TrackedShoppingItem].self, from: data) else {
+            return
+        }
+
+        draftItems = decoded
+    }
+
+    func updateDraft() {
+        persistDraftItems()
+    }
+
+    func persistSelectedProvince() {
+        UserDefaults.standard.set(selectedProvince, forKey: StorageKey.selectedProvince)
+    }
+
+    func loadSelectedProvince() {
+        if let province = UserDefaults.standard.string(forKey: StorageKey.selectedProvince) {
+            selectedProvince = province
+        }
     }
 }

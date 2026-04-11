@@ -6,35 +6,36 @@ struct HomeScreenView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 24) {
-                Spacer().frame(height: 40)
+            Spacer().frame(height: 40)
 
-                CircleWidget()
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    CircleWidget()
+                        .padding(.bottom, 12)
 
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("This month you have spent $\(String(format: "%.2f", shoppingStore.currentMonthTotal()))")
-                        .font(.system(size: 28, weight: .regular, design: .serif))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("This month you have spent $\(String(format: "%.2f", shoppingStore.currentMonthTotal()))")
+                            .font(.system(size: 28, weight: .regular, design: .serif))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                        Text("\(shoppingStore.savedShoppings.count) saved receipts this month")
-                        .font(.system(size: 18, weight: .regular, design: .serif))
-                        .foregroundColor(.white.opacity(0.85))
-                        .lineSpacing(4)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-
-                SavedShoppingsSection(currentScreen: $currentScreen)
+                        Text("\(shoppingStore.savedShoppings.count) saved receipts")
+                            .font(.system(size: 18, weight: .regular, design: .serif))
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 24)
 
-                Text("click + to start tracking products")
-                    .font(.system(size: 16, weight: .regular, design: .serif))
-                    .foregroundColor(.white.opacity(0.75))
-                    .padding(.bottom, 14)
+                    SavedShoppingsSection(currentScreen: $currentScreen)
+                        .padding(.horizontal, 24)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Text("Tap + to start tracking products")
+                .font(.system(size: 16, weight: .regular, design: .serif))
+                .foregroundColor(.white.opacity(0.75))
+                .padding(.bottom, 14)
 
             BottomBar(
                 onHome: { withAnimation(.easeInOut) { currentScreen = .home } },
@@ -45,6 +46,7 @@ struct HomeScreenView: View {
             .padding(.horizontal, 22)
             .padding(.bottom, 18)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundColor(.white)
     }
 }
@@ -69,25 +71,20 @@ private struct SavedShoppingsSection: View {
                             .foregroundColor(.white.opacity(0.5))
                     )
             } else {
-                ScrollView(.vertical, showsIndicators: true) {
-                    VStack(spacing: 12) {
-                        ForEach(shoppingStore.savedShoppings) { shopping in
-                            SavedShoppingCard(
-                                shopping: shopping,
-                                onDelete: {
-                                    shoppingStore.deleteShopping(shopping)
-                                },
-                                onEdit: {
-                                    shoppingStore.editShopping(shopping)
-                                    currentScreen = .tracking
-                                }
-                            )
-                        }
+                VStack(spacing: 12) {
+                    ForEach(shoppingStore.savedShoppings) { shopping in
+                        SavedShoppingCard(
+                            shopping: shopping,
+                            onDelete: {
+                                shoppingStore.deleteShopping(shopping)
+                            },
+                            onEdit: {
+                                shoppingStore.editShopping(shopping)
+                                currentScreen = .tracking
+                            }
+                        )
                     }
-                    .padding(.trailing, 6)
                 }
-                .frame(height: 220)
-                .clipped()
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
