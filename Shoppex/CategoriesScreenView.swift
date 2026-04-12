@@ -1,112 +1,56 @@
 import SwiftUI
 
-struct ProductDetail: Identifiable {
-    let id = UUID()
-    let name: String
-    let price: Double
-    let unit: String
-    let brand: String
-    let notes: String
-
-    var priceWithTax: Double { price * 1.13 }
-}
-
-struct SupplyItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let products: [ProductDetail]
-    var isExpanded: Bool = false
-}
-
-struct CategoryItem: Identifiable {
-    let id = UUID()
-    let name: String
-    let icon: String
-    var items: [SupplyItem]
-    var isExpanded: Bool = false
-}
-
-extension CategoryItem {
-    static let sampleData: [CategoryItem] = [
-        CategoryItem(name: "Dairy", icon: "drop.fill", items: [
-            SupplyItem(name: "Milk", products: [
-                ProductDetail(name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated"),
-                ProductDetail(name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated"),
-                ProductDetail(name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated")
-            ]),
-            SupplyItem(name: "Cheese", products: [
-                ProductDetail(name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated"),
-                ProductDetail(name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated")
-            ]),
-            SupplyItem(name: "Sour Cream", products: [
-                ProductDetail(name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated")
-            ])
-        ]),
-        CategoryItem(name: "Bakery", icon: "flame.fill", items: [
-            SupplyItem(name: "Bread", products: [
-                ProductDetail(name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder", notes: ""),
-                ProductDetail(name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre")
-            ]),
-            SupplyItem(name: "Bagels", products: [
-                ProductDetail(name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style", notes: "")
-            ])
-        ]),
-        CategoryItem(name: "Produce", icon: "leaf.fill", items: [
-            SupplyItem(name: "Apples", products: [
-                ProductDetail(name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith"),
-                ProductDetail(name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "")
-            ]),
-            SupplyItem(name: "Bananas", products: [
-                ProductDetail(name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita", notes: "")
-            ])
-        ]),
-        CategoryItem(name: "Cleaning", icon: "sparkles", items: [
-            SupplyItem(name: "Detergent", products: [
-                ProductDetail(name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide", notes: ""),
-                ProductDetail(name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent")
-            ]),
-            SupplyItem(name: "Dish Soap", products: [
-                ProductDetail(name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original")
-            ]),
-            SupplyItem(name: "Paper Towels", products: [
-                ProductDetail(name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size")
-            ])
-        ]),
-        CategoryItem(name: "Medication", icon: "cross.fill", items: [
-            SupplyItem(name: "Pain Relief", products: [
-                ProductDetail(name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food"),
-                ProductDetail(name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", notes: "")
-            ])
-        ])
-    ]
-}
-
 struct CategoriesScreenView: View {
     @Binding var currentScreen: AppScreen
+    @EnvironmentObject private var shoppingStore: ShoppingStore
+
     @State private var searchText = ""
-    @State private var categories: [CategoryItem] = CategoryItem.sampleData
+    @State private var categories: [CategoryItem] = []
+    @State private var newCategoryName = ""
+    @State private var newProductName = ""
+    @State private var selectedCategoryID: UUID?
+    @State private var selectedProductID: UUID?
+    @State private var activeAlert: ActiveAlert?
+
+    enum ActiveAlert {
+        case category
+        case product
+        case renameCategory
+        case renameProduct
+    }
 
     var filteredCategories: [CategoryItem] {
         guard !searchText.isEmpty else { return categories }
+
         return categories.compactMap { category in
-            let matchingItems = category.items.compactMap { item -> SupplyItem? in
-                if item.name.lowercased().contains(searchText.lowercased()) { return item }
-                let matchingProducts = item.products.filter {
+            let matchingProducts = category.products.compactMap { product -> ProductItem? in
+                if product.name.lowercased().contains(searchText.lowercased()) {
+                    return product
+                }
+
+                let matchingTrackedItems = product.trackedItems.filter {
                     $0.name.lowercased().contains(searchText.lowercased())
                 }
-                if !matchingProducts.isEmpty {
-                    let copy = item
-                    return copy
-                }
-                return nil
+
+                guard !matchingTrackedItems.isEmpty else { return nil }
+
+                return ProductItem(
+                    id: product.id,
+                    name: product.name,
+                    trackedItems: matchingTrackedItems,
+                    isExpanded: product.isExpanded
+                )
             }
-            if category.name.lowercased().contains(searchText.lowercased()) { return category }
-            if !matchingItems.isEmpty {
-                var copy = category
-                copy.items = matchingItems
-                return copy
+
+            if category.name.lowercased().contains(searchText.lowercased()) {
+                return category
             }
-            return nil
+
+            guard !matchingProducts.isEmpty else { return nil }
+
+            var copy = category
+            copy.products = matchingProducts
+            return copy
         }
     }
 
@@ -118,7 +62,7 @@ struct CategoriesScreenView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.white.opacity(0.4))
-                    TextField("", text: $searchText, prompt: Text("Search items...").foregroundColor(.white.opacity(0.4)))
+                    TextField("", text: $searchText, prompt: Text("Search products...").foregroundColor(.white.opacity(0.4)))
                         .foregroundColor(.white)
                         .font(.system(size: 17))
                 }
@@ -126,25 +70,26 @@ struct CategoriesScreenView: View {
                 .background(Color.white.opacity(0.15))
                 .cornerRadius(12)
                 .padding(.horizontal, 24)
+                Button(action: {
+                    activeAlert = .category
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("New Category")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.white.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 24)
 
                 Text("Categories")
                     .font(.system(size: 28, weight: .regular, design: .serif))
                     .foregroundColor(.white)
                     .padding(.top, 10)
-
-                // Button(action: {}) {
-                //     Text("Add a new category")
-                //         .font(.system(size: 16, weight: .medium))
-                //         .foregroundColor(.white)
-                //         .padding(.horizontal, 28)
-                //         .padding(.vertical, 12)
-                //         .background(
-                //             Capsule()
-                //                 .fill(Color(hex: "#4A90E2").opacity(0.25))
-                //                 .overlay(Capsule().stroke(Color(hex: "#4A90E2"), lineWidth: 2))
-                //         )
-                // }
-                // .padding(.top, 6)
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -154,9 +99,39 @@ struct CategoriesScreenView: View {
                                 onToggleCategory: {
                                     toggleCategory(id: filteredCategories[catIndex].id)
                                 },
-                                onToggleItem: { itemID in
-                                    toggleItem(categoryID: filteredCategories[catIndex].id, itemID: itemID)
-                                }
+                                onToggleProduct: { productID in
+                                    toggleProduct(categoryID: filteredCategories[catIndex].id, productID: productID)
+                                },
+                                onAddProduct: addProductToShopping,
+                                onAddProductToCategory: { categoryID in
+                                    selectedCategoryID = categoryID
+                                    activeAlert = .product
+                                },
+                                onRenameCategory: { categoryID in
+                                    selectedCategoryID = categoryID
+                                    newCategoryName = categories.first(where: { $0.id == categoryID })?.name ?? ""
+                                    activeAlert = .renameCategory
+                                },
+                                onDeleteCategory: { categoryID in
+                                    DB.shared.deleteCategory(id: categoryID)
+                                    categories = DB.shared.fetchCategoriesTree()
+                                },
+                                onRenameProduct: { productID in
+                                    selectedProductID = productID
+                                    newProductName = categories
+                                        .flatMap({ $0.products })
+                                        .first(where: { $0.id == productID })?.name ?? ""
+                                    activeAlert = .renameProduct
+                                },
+                                onDeleteProduct: { productID in
+                                    DB.shared.deleteProduct(id: productID)
+                                    categories = DB.shared.fetchCategoriesTree()
+                                },
+                                onNavigateToTracking: {
+                                    withAnimation(.easeInOut) {
+                                        currentScreen = .tracking
+                                    }
+                                },
                             )
                         }
                     }
@@ -179,178 +154,382 @@ struct CategoriesScreenView: View {
             .padding(.bottom, 18)
         }
         .foregroundColor(.white)
+        .onAppear {
+            categories = DB.shared.fetchCategoriesTree()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .trackedItemsDidChange)) { _ in
+            categories = DB.shared.fetchCategoriesTree()
+        }
+        .alert(
+        activeAlert == .category ? "New Category" :
+            activeAlert == .renameCategory ? "Rename Category" :
+            activeAlert == .renameProduct ? "Rename Product" : "New Product",
+            isPresented: Binding(
+                get: { activeAlert != nil },
+                set: { if !$0 { activeAlert = nil } }
+            )
+        ) {
+            if activeAlert == .category {
+                TextField("Category name", text: $newCategoryName)
+
+                Button("Add") {
+                    let trimmed = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty else { return }
+                    DB.shared.addCategory(name: trimmed, icon: "folder.fill")
+                    categories = DB.shared.fetchCategoriesTree()
+                    newCategoryName = ""
+                    activeAlert = nil
+                }
+            } else if activeAlert == .renameCategory {
+                TextField("Category name", text: $newCategoryName)
+
+                Button("Save") {
+                    let trimmed = newCategoryName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let categoryID = selectedCategoryID,
+                          !trimmed.isEmpty else { return }
+                    DB.shared.renameCategory(id: categoryID, newName: trimmed)
+                    categories = DB.shared.fetchCategoriesTree()
+                    newCategoryName = ""
+                    selectedCategoryID = nil
+                    activeAlert = nil
+                }
+            } else if activeAlert == .renameProduct {
+                TextField("Product name", text: $newProductName)
+
+                Button("Save") {
+                    let trimmed = newProductName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    guard let productID = selectedProductID,
+                          !trimmed.isEmpty else { return }
+
+                    DB.shared.renameProduct(id: productID, newName: trimmed)
+                    categories = DB.shared.fetchCategoriesTree()
+
+                    newProductName = ""
+                    selectedProductID = nil
+                    activeAlert = nil
+                }
+            } else {
+                TextField("Product name", text: $newProductName)
+
+                Button("Add") {
+                    let trimmed = newProductName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+                    guard let categoryID = selectedCategoryID,
+                          !trimmed.isEmpty else { return }
+
+                    DB.shared.addProduct(name: trimmed, categoryID: categoryID)
+                    categories = DB.shared.fetchCategoriesTree()
+                    newProductName = ""
+                    selectedCategoryID = nil
+                    activeAlert = nil
+                }
+            }
+
+            Button("Cancel", role: .cancel) {
+                newCategoryName = ""
+                newProductName = ""
+                selectedCategoryID = nil
+                selectedProductID = nil
+                activeAlert = nil
+            }
+        }
     }
 
     private func toggleCategory(id: UUID) {
         withAnimation(.easeInOut(duration: 0.25)) {
-            if let i = categories.firstIndex(where: { $0.id == id }) {
-                categories[i].isExpanded.toggle()
+            if let index = categories.firstIndex(where: { $0.id == id }) {
+                categories[index].isExpanded.toggle()
+                DB.shared.updateCategoryExpanded(
+                    id: id,
+                    isExpanded: categories[index].isExpanded
+                )
             }
         }
     }
 
-    private func toggleItem(categoryID: UUID, itemID: UUID) {
+    private func toggleProduct(categoryID: UUID, productID: UUID) {
         withAnimation(.easeInOut(duration: 0.2)) {
-            if let ci = categories.firstIndex(where: { $0.id == categoryID }),
-               let ii = categories[ci].items.firstIndex(where: { $0.id == itemID }) {
-                categories[ci].items[ii].isExpanded.toggle()
+            if let categoryIndex = categories.firstIndex(where: { $0.id == categoryID }),
+               let productIndex = categories[categoryIndex].products.firstIndex(where: { $0.id == productID }) {
+               categories[categoryIndex].products[productIndex].isExpanded.toggle()
+               DB.shared.updateProductExpanded(
+                   id: productID,
+                   isExpanded: categories[categoryIndex].products[productIndex].isExpanded
+               )
             }
         }
     }
+
+    private func addProductToShopping(_ product: ProductItem) {
+        shoppingStore.addProduct(product)
+        withAnimation(.easeInOut) {
+            currentScreen = .tracking
+        }
+    }
 }
+
 struct CategoryAccordionRow: View {
     let category: CategoryItem
     let onToggleCategory: () -> Void
-    let onToggleItem: (UUID) -> Void
+    let onToggleProduct: (UUID) -> Void
+    let onAddProduct: (ProductItem) -> Void
+    let onAddProductToCategory: (UUID) -> Void
+    let onRenameCategory: (UUID) -> Void
+    let onDeleteCategory: (UUID) -> Void
+    let onRenameProduct: (UUID) -> Void
+    let onDeleteProduct: (UUID) -> Void
+    let onNavigateToTracking: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            Button(action: onToggleCategory) {
-                HStack(spacing: 14) {
-                    Image(systemName: category.icon)
-                        .font(.system(size: 16))
-                        .foregroundColor(Color(hex: "#4A90E2"))
-                        .frame(width: 28)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Button(action: onToggleCategory) {
+                        HStack(spacing: 14) {
+                            Image(systemName: category.icon)
+                                .font(.system(size: 18))
+                                .foregroundColor(Color(hex: "#4A90E2"))
+                                .frame(width: 28)
 
-                    Text(category.name)
-                        .font(.system(size: 19, weight: .semibold))
-                        .foregroundColor(.white)
+                            Text(category.name)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundColor(.white)
 
-                    Spacer()
+                                Spacer()
 
-                    Text("\(category.items.count) items")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.4))
+                                Text("\(category.products.count)")
+                                    .font(.system(size: 15))
+                                    .foregroundColor(.white.opacity(0.4))
+                                    .frame(minWidth: 20)
 
-                    Image(systemName: category.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.5))
-                        .animation(.easeInOut(duration: 0.2), value: category.isExpanded)
-                }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: category.isExpanded ? 16 : 16)
-                        .fill(Color.white.opacity(0.1))
-                )
-            }
-            .buttonStyle(PlainButtonStyle())
-            if category.isExpanded {
-                VStack(spacing: 0) {
-                    ForEach(category.items) { item in
-                        ItemAccordionRow(
-                            item: item,
-                            onToggle: { onToggleItem(item.id) }
-                        )
-                        .padding(.leading, 16)
+                                Menu {
+                                    Button("Add Product") {
+                                        onAddProductToCategory(category.id)
+                                    }
+
+                                    Button("Rename") {
+                                        onRenameCategory(category.id)
+                                    }
+
+                                    Button("Delete", role: .destructive) {
+                                        onDeleteCategory(category.id)
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundColor(.white.opacity(0.7))
+                                        .frame(width: 20)
+                                }
+
+                                Image(systemName: category.isExpanded ? "chevron.down" : "chevron.right")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.5))
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
-                .padding(.top, 4)
-                .padding(.bottom, 8)
-                .padding(.horizontal, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white.opacity(0.05))
-                )
-                .transition(.opacity.combined(with: .move(edge: .top)))
+
+                if category.isExpanded {
+                    VStack(spacing: 0) {
+                        ForEach(category.products) { product in
+                            ProductAccordionRow(
+                                product: product,
+                                onToggle: { onToggleProduct(product.id) },
+                                onAdd: { onAddProduct(product) },
+                                onRename: {
+                                    onRenameProduct(product.id)
+                                },
+                                onDelete: {
+                                    onDeleteProduct(product.id)
+                                },
+                                onNavigateToTracking: onNavigateToTracking
+                            )
+                            .padding(.leading, 6)
+                        }
+                    }
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white.opacity(0.05))
+                    )
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.08))
+            )
+            .padding(.bottom, 10)
+        }
+    }
+
+    struct ProductAccordionRow: View {
+        let product: ProductItem
+        let onToggle: () -> Void
+        let onAdd: () -> Void
+        let onRename: () -> Void
+        let onDelete: () -> Void
+        let onNavigateToTracking: () -> Void
+
+        var body: some View {
+            VStack(spacing: 0) {
+                HStack {
+                    Button(action: onToggle) {
+                        HStack {
+                            Text(product.name)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white.opacity(0.9))
+
+                            Spacer()
+
+                            Image(systemName: product.isExpanded ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.white.opacity(0.4))
+                                .animation(.easeInOut(duration: 0.2), value: product.isExpanded)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 13)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    HStack(spacing: 12) {
+                        Button(action: onAdd) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 26))
+                                .foregroundColor(Color(hex: "#0A84FF"))
+                        }
+
+                        Menu {
+                            Button("Rename") {
+                                onRename()
+                            }
+
+                            Button("Delete", role: .destructive) {
+                                onDelete()
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundColor(.white.opacity(0.7))
+                        }
+                    }
+                    .padding(.trailing, 12)
+                }
+
+                Divider()
+                    .background(Color.white.opacity(0.07))
+                    .padding(.leading, 14)
+
+                if product.isExpanded {
+                    VStack(spacing: 0) {
+                        ForEach(product.trackedItems) { trackedItem in
+                            TrackedItemRow(
+                                trackedItem: trackedItem,
+                                onDelete: {
+                                    DB.shared.deleteTrackedItem(id: trackedItem.id)
+                                },
+                                onReAdd: {
+                                    onNavigateToTracking()
+                                }
+                            )
+                        }
+                    }
+                    .padding(.vertical, 6)
+                    .background(Color.white.opacity(0.04))
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
         }
-        .padding(.bottom, 10)
     }
-}
-struct ItemAccordionRow: View {
-    let item: SupplyItem
-    let onToggle: () -> Void
 
-    var body: some View {
-        VStack(spacing: 0) {
-            Button(action: onToggle) {
-                HStack {
-                    Text(item.name)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+    struct TrackedItemRow: View {
+        @EnvironmentObject private var shoppingStore: ShoppingStore
 
-                    Spacer()
+        let trackedItem: TrackedItem
+        let onDelete: () -> Void
+        let onReAdd: () -> Void
 
-                    Text("\(item.products.count) products")
+        var body: some View {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trackedItem.name)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white.opacity(0.85))
+
+                    HStack(spacing: 6) {
+                        Text(trackedItem.brand)
+                            .font(.system(size: 12))
+                            .foregroundColor(.white.opacity(0.4))
+
+                        if !trackedItem.notes.isEmpty {
+                            Text("·")
+                                .foregroundColor(.white.opacity(0.3))
+                            Text(trackedItem.notes)
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "#4A90E2").opacity(0.8))
+                        }
+                    }
+
+                    Text(trackedItem.purchasedAt)
                         .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.4))
+
+                    Text(String(format: "$%.2f", trackedItem.price))
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "#4A90E2"))
+
+                    Text(trackedItem.isTaxable ? "Taxable item" : "Non-taxable item")
+                        .font(.system(size: 11))
+                        .foregroundColor(.white.opacity(0.45))
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 8) {
+                    Text(trackedItem.unit)
+                        .font(.system(size: 11))
                         .foregroundColor(.white.opacity(0.35))
 
-                    Image(systemName: item.isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
-                        .animation(.easeInOut(duration: 0.2), value: item.isExpanded)
+                    HStack(spacing: 10) {
+                        Button(action: {
+                            let draft = TrackedShoppingItem(
+                                productID: trackedItem.productID,
+                                productName: trackedItem.name,
+                                itemName: trackedItem.name,
+                                unit: trackedItem.unit,
+                                brand: trackedItem.brand,
+                                price: String(format: "%.2f", trackedItem.price),
+                                notes: trackedItem.notes,
+                                taxable: trackedItem.isTaxable
+                            )
+
+                            shoppingStore.draftItems.append(draft)
+                            shoppingStore.persistDraftItems()
+                            onReAdd()
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundColor(Color(hex: "#0A84FF"))
+                        }
+
+                        Button(action: onDelete) {
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.red.opacity(0.8))
+                        }
+                    }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 13)
             }
-            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.clear)
+
             Divider()
-                .background(Color.white.opacity(0.07))
+                .background(Color.white.opacity(0.05))
                 .padding(.leading, 14)
-            if item.isExpanded {
-                VStack(spacing: 0) {
-                    ForEach(item.products) { product in
-                        ProductDetailRow(product: product)
-                    }
-                }
-                .padding(.vertical, 6)
-                .background(Color.white.opacity(0.04))
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
         }
-    }
-}
-
-struct ProductDetailRow: View {
-    let product: ProductDetail
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.name)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.white.opacity(0.85))
-
-                HStack(spacing: 6) {
-                    Text(product.brand)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.4))
-
-                    if !product.notes.isEmpty {
-                        Text("·")
-                            .foregroundColor(.white.opacity(0.3))
-                        Text(product.notes)
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "#4A90E2").opacity(0.8))
-                    }
-                }
-
-                Text(String(format: "$%.2f  ($%.2f with HST)", product.price, product.priceWithTax))
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "#4A90E2"))
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(product.unit)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.35))
-
-                Button(action: {}) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(Color(hex: "#0A84FF"))
-                }
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.clear)
-
-        Divider()
-            .background(Color.white.opacity(0.05))
-            .padding(.leading, 14)
     }
 }
