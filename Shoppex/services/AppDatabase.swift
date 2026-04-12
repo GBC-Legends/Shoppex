@@ -115,9 +115,7 @@ enum AppDatabase {
         try migrator.migrate(dbQueue)
     }
 
-    private static func seed(_ db: Database) throws {
-        let purchaseDate = "2026-04-08"
-
+    nonisolated private static func seed(_ db: Database) throws {
         let dairyId = UUID()
         let bakeryId = UUID()
         let produceId = UUID()
@@ -166,26 +164,7 @@ enum AppDatabase {
             try product.insert(db)
         }
 
-        let trackedItems = [
-            TrackedItemRecord(productId: milkId.uuidString, name: "Whole Milk 1L", price: 4.29, unit: "1L", brand: "Natrel", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: milkId.uuidString, name: "2% Milk 2L", price: 6.49, unit: "2L", brand: "Beatrice", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: milkId.uuidString, name: "Skim Milk 1L", price: 3.99, unit: "1L", brand: "Lactantia", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: cheeseId.uuidString, name: "Cheddar Block 400g", price: 8.99, unit: "400g", brand: "Black Diamond", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: cheeseId.uuidString, name: "Mozzarella 200g", price: 5.49, unit: "200g", brand: "Saputo", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: sourCreamId.uuidString, name: "Sour Cream 500mL", price: 3.79, unit: "500mL", brand: "Astro", notes: "Refrigerated", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: breadId.uuidString, name: "White Sandwich Bread", price: 3.49, unit: "675g", brand: "Wonder", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: breadId.uuidString, name: "Whole Wheat Loaf", price: 4.29, unit: "600g", brand: "Dempster's", notes: "High fibre", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: bagelsId.uuidString, name: "Plain Bagels", price: 4.49, unit: "6 pack", brand: "Montreal Style", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: applesId.uuidString, name: "Green Apples", price: 7.99, unit: "bag 1.5kg", brand: "Local Farm", notes: "Granny Smith", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: applesId.uuidString, name: "Gala Apples", price: 6.99, unit: "bag 1.5kg", brand: "Local Farm", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: bananasId.uuidString, name: "Bananas", price: 2.49, unit: "bunch", brand: "Chiquita", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: detergentId.uuidString, name: "Laundry Pods 42ct", price: 15.00, unit: "42 count", brand: "Tide", purchasedAt: purchaseDate, isTaxable: true),
-            TrackedItemRecord(productId: detergentId.uuidString, name: "Liquid Detergent 1.47L", price: 12.99, unit: "1.47L", brand: "Gain", notes: "Fresh scent", purchasedAt: purchaseDate, isTaxable: true),
-            TrackedItemRecord(productId: dishSoapId.uuidString, name: "Dish Soap 532mL", price: 4.99, unit: "532mL", brand: "Dawn", notes: "Original", purchasedAt: purchaseDate, isTaxable: true),
-            TrackedItemRecord(productId: paperTowelsId.uuidString, name: "Paper Towels 6-Roll", price: 8.99, unit: "6 rolls", brand: "Bounty", notes: "Select-A-Size", purchasedAt: purchaseDate, isTaxable: true),
-            TrackedItemRecord(productId: painReliefId.uuidString, name: "Ibuprofen 200mg 100ct", price: 11.99, unit: "100 tablets", brand: "Advil", notes: "Take with food", purchasedAt: purchaseDate, isTaxable: false),
-            TrackedItemRecord(productId: painReliefId.uuidString, name: "Acetaminophen 500mg", price: 9.49, unit: "100 tablets", brand: "Tylenol", purchasedAt: purchaseDate, isTaxable: false)
-        ]
+        let trackedItems: [TrackedItemRecord] = []
 
         for trackedItem in trackedItems {
             try trackedItem.insert(db)
@@ -207,6 +186,8 @@ final class DB {
         if sqlite3_open(url.path, &db) != SQLITE_OK {
             fatalError("Unable to open database")
         }
+
+        execute("PRAGMA foreign_keys = ON;")
 
         migrateLegacySchemaIfNeeded()
         createTables()
@@ -356,6 +337,7 @@ final class DB {
 
         let trackedItem = TrackedItem(
             id: newID,
+            productID: item.productID,
             name: item.itemName.isEmpty ? item.productName : item.itemName,
             price: item.priceValue,
             unit: item.unit,
@@ -465,6 +447,7 @@ final class DB {
 
             let trackedItem = TrackedItem(
                 id: UUID(uuidString: id) ?? UUID(),
+                productID: UUID(uuidString: productID) ?? UUID(),
                 name: name,
                 price: price,
                 unit: unit,
@@ -575,6 +558,69 @@ final class DB {
 
         sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
         sqlite3_bind_text(stmt, 1, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+
+        stepAndFinalize(stmt)
+
+        NotificationCenter.default.post(name: .trackedItemsDidChange, object: nil)
+    }
+
+    func addCategory(name: String, icon: String) {
+        let category = CategoryItem(
+            name: name,
+            icon: icon,
+            products: []
+        )
+
+        insertCategory(category)
+    }
+
+    func addProduct(name: String, categoryID: UUID) {
+        let product = ProductItem(
+            name: name,
+            trackedItems: []
+        )
+
+        insertProduct(product, categoryID: categoryID.uuidString)
+    }
+
+    func deleteCategory(id: UUID) {
+        let sql = "DELETE FROM categories WHERE id = ?;"
+        var stmt: OpaquePointer?
+
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
+        sqlite3_bind_text(stmt, 1, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+
+        stepAndFinalize(stmt)
+    }
+
+    func deleteProduct(id: UUID) {
+        let sql = "DELETE FROM products WHERE id = ?;"
+        var stmt: OpaquePointer?
+
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
+        sqlite3_bind_text(stmt, 1, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+
+        stepAndFinalize(stmt)
+    }
+
+    func renameCategory(id: UUID, newName: String) {
+        let sql = "UPDATE categories SET name = ? WHERE id = ?;"
+        var stmt: OpaquePointer?
+
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
+        sqlite3_bind_text(stmt, 1, newName.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+
+        stepAndFinalize(stmt)
+    }
+
+    func renameProduct(id: UUID, newName: String) {
+        let sql = "UPDATE products SET name = ? WHERE id = ?;"
+        var stmt: OpaquePointer?
+
+        sqlite3_prepare_v2(db, sql, -1, &stmt, nil)
+        sqlite3_bind_text(stmt, 1, newName.cString(using: .utf8), -1, SQLITE_TRANSIENT)
+        sqlite3_bind_text(stmt, 2, id.uuidString.cString(using: .utf8), -1, SQLITE_TRANSIENT)
 
         stepAndFinalize(stmt)
     }

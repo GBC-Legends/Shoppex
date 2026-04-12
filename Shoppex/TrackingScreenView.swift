@@ -51,8 +51,8 @@ struct TrackingScreenView: View {
                                 TrackingRow(item: $item) {
                                     shoppingStore.removeDraftItem(id: item.id)
                                 }
-                                .onChange(of: item) {
-                                    shoppingStore.updateDraft()
+                                .onChange(of: shoppingStore.draftItems) {
+                                    shoppingStore.persistDraftItems()
                                 }
                             }
                         }

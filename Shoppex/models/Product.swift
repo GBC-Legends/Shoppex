@@ -7,6 +7,7 @@ extension Notification.Name {
 
 struct TrackedItem: Identifiable, Codable {
     let id: UUID
+    let productID: UUID
     let name: String
     let price: Double
     let unit: String
@@ -17,6 +18,7 @@ struct TrackedItem: Identifiable, Codable {
 
     init(
         id: UUID = UUID(),
+        productID: UUID,
         name: String,
         price: Double,
         unit: String,
@@ -26,6 +28,7 @@ struct TrackedItem: Identifiable, Codable {
         isTaxable: Bool
     ) {
         self.id = id
+        self.productID = productID
         self.name = name
         self.price = price
         self.unit = unit
@@ -164,6 +167,11 @@ final class ShoppingStore: ObservableObject {
 
     func addProduct(_ product: ProductItem) {
         draftItems.append(TrackedShoppingItem(productID: product.id, productName: product.name))
+        persistDraftItems()
+    }
+
+    func addDraftItem(_ item: TrackedShoppingItem) {
+        draftItems.append(item)
         persistDraftItems()
     }
 
